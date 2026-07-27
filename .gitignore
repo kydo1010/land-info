@@ -1,0 +1,22 @@
+# env
+.env
+.env.*
+!.env.example
+
+# python (backend)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# node (frontend)
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# editor / os
+.DS_Store
+.vscode/
+.idea/
