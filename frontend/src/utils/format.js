@@ -4,13 +4,9 @@ export const num = (n) => n.toLocaleString("en-US");
 const UNIT = /([\d.,]) ?(㎡|%|건|평|원\/㎡|원|만|층|㎡\))/g;
 export const sp = (v) => (typeof v === "string" ? v.replace(UNIT, "$1 $2") : v);
 
-// 공시지가 5개년 꺾은선 차트 좌표 계산. missingYear가 있으면 해당 연도는 값을 비워
-// 선이 끊기는 모습(F-04 요구사항)을 보여준다.
-export function buildChart(prices, factor = 1, missingYear = 2024) {
-  const rows = prices.map((p) => ({
-    year: p.year,
-    value: p.year === missingYear ? null : Math.round((p.value * factor) / 1000) * 1000,
-  }));
+// 공시지가 5개년 꺾은선 차트 좌표 계산. rows는 [{year, value|null}, ...] — value가 null인
+// 연도는 선이 끊기는 모습(F-04 요구사항)으로 표시된다.
+export function buildChart(rows) {
   const vals = rows.filter((r) => r.value).map((r) => r.value);
   const min = Math.min(...vals) * 0.94;
   const max = Math.max(...vals) * 1.04;
@@ -79,7 +75,7 @@ export function buildChart(prices, factor = 1, missingYear = 2024) {
     dots,
     gridLines,
     priceRows,
-    hasGap: missingYear != null,
+    hasGap: rows.some((r) => r.value == null),
     priceLatest: num(last.value),
     priceLatestYear: last.year,
     priceDelta: prev ? "전년 대비 +" + (((last.value - prev.value) / prev.value) * 100).toFixed(1) + "%" : "—",

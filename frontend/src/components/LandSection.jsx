@@ -11,8 +11,8 @@ export default function LandSection({ status, rows, onRetry }) {
       </div>
       <div style={{ background: "#FFFFFF", border: "1px solid #E5E1D8", borderRadius: 3 }}>
         {loading && (
-          <div style={{ padding: 26, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 22 }}>
-            {[1, 2, 3, 4].map((k) => (
+          <div style={{ padding: 26, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 22 }}>
+            {[1, 2, 3].map((k) => (
               <div key={k} className="shimmer">
                 <div style={{ height: 10, width: 48, background: "#EDEAE2" }} />
                 <div style={{ height: 20, width: "70%", background: "#E7E3DA", marginTop: 12 }} />
@@ -21,7 +21,7 @@ export default function LandSection({ status, rows, onRetry }) {
           </div>
         )}
         {status === "ok" && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)" }}>
             {rows.map((l) => (
               <div key={l.label} style={{ padding: "24px 26px", borderRight: "1px solid #EDEAE2" }}>
                 <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em" }}>{l.label}</div>

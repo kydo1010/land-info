@@ -6,8 +6,11 @@ import ZoneSection from "./components/ZoneSection.jsx";
 import LandSection from "./components/LandSection.jsx";
 import BuildingSection from "./components/BuildingSection.jsx";
 import PriceSection from "./components/PriceSection.jsx";
-import { CANDS, VAR, RULES, PRICES } from "./data/mockData.js";
-import { sp, buildChart } from "./utils/format.js";
+import { CANDS } from "./data/mockData.js";
+import { normalizeLand, normalizeBuilding, normalizeZone, normalizePriceRows } from "./data/normalize.js";
+import { buildChart } from "./utils/format.js";
+
+const sharedChart = buildChart(normalizePriceRows());
 
 const SECTION_IDS = ["summary", "zone", "land", "bld", "price"];
 
@@ -34,14 +37,14 @@ export default function App() {
     const id = c.pnu;
     const alreadyOpen = tabs.some((t) => t.id === id);
     if (!alreadyOpen) {
-      const v = VAR[id] || VAR[CANDS[0].pnu];
+      const bldStatus = normalizeBuilding(id).status;
       const tab = { id, cand: c, zone: "loading", land: "loading", bld: "loading", price: "loading", fetchedAt: timestamp() };
       setTabs((prev) => (prev.some((t) => t.id === id) ? prev : [...prev, tab]));
       timersRef.current[id] = [
         setTimeout(() => patch(id, { zone: "ok" }), 700),
         setTimeout(() => patch(id, { land: "ok" }), 1050),
         setTimeout(() => patch(id, { price: "ok" }), 1500),
-        setTimeout(() => patch(id, { bld: v.bld }), 1900),
+        setTimeout(() => patch(id, { bld: bldStatus }), 1900),
       ];
     }
     setActiveId(id);
@@ -108,19 +111,21 @@ export default function App() {
 
   const tab = tabs.find((t) => t.id === activeId) || null;
   const sel = tab ? tab.cand : null;
-  const v = sel ? VAR[sel.pnu] || VAR[CANDS[0].pnu] : VAR[CANDS[0].pnu];
+  const pnu = sel ? sel.pnu : CANDS[0].pnu;
+  const land = normalizeLand(pnu);
+  const zone = normalizeZone(pnu);
+  const building = normalizeBuilding(pnu);
   const st = tab || { zone: "idle", land: "idle", bld: "idle", price: "idle" };
 
-  const chart = buildChart(PRICES, v.factor);
+  const chart = sharedChart;
 
   const tabItems = tabs.map((t) => {
-    const tv = VAR[t.id] || VAR[CANDS[0].pnu];
+    const tz = normalizeZone(t.id);
     const busy = [t.zone, t.land, t.bld, t.price].some((x) => x === "loading");
-    const price = buildChart(PRICES, tv.factor).priceLatest;
     return {
       id: t.id,
       title: t.cand.road.replace("서울특별시 ", ""),
-      subtitle: busy ? "조회 중…" : `${tv.use} · ${price}원/㎡`,
+      subtitle: busy ? "조회 중…" : `${tz.use} · ${sharedChart.priceLatest}원/㎡`,
       zone: t.zone,
       land: t.land,
       bld: t.bld,
@@ -129,14 +134,14 @@ export default function App() {
   });
 
   const dash = "—";
-  const zoneRuleKinds = ["해당", "저촉", "접함"].map((kind) => v.rules.filter((ri) => RULES[ri].kind === kind).length + "건 " + kind).join(" · ");
+  const zoneRuleKinds = ["해당", "저촉", "접함"].map((kind) => zone.rules.filter((r) => r.kind === kind).length + "건 " + kind).join(" · ");
   const summaryItems = [
-    { label: "토지이용계획", value: st.zone === "ok" ? v.use : dash, sub: zoneRuleKinds, ready: st.zone === "ok" },
-    { label: "토지대장", value: st.land === "ok" ? sp(v.area) : dash, sub: `지목 ${v.jimok} · ${v.owner}`, ready: st.land === "ok" },
+    { label: "토지이용계획", value: st.zone === "ok" ? zone.use : dash, sub: zoneRuleKinds, ready: st.zone === "ok" },
+    { label: "토지대장", value: st.land === "ok" ? land.area : dash, sub: `지목 ${land.jimok} · ${land.owner}`, ready: st.land === "ok" },
     {
       label: "건축물대장",
-      value: st.bld === "ok" ? v.purpose : st.bld === "empty" ? "건축물 없음" : dash,
-      sub: st.bld === "ok" ? v.summary.split(" · ")[0] : st.bld === "empty" ? "나지" : "조회 중",
+      value: st.bld === "ok" ? building.purpose : st.bld === "empty" ? "건축물 없음" : dash,
+      sub: st.bld === "ok" ? building.floorSummary.split(" · ")[0] : st.bld === "empty" ? "나지" : "조회 중",
       ready: st.bld === "ok" || st.bld === "empty",
     },
     {
@@ -148,10 +153,9 @@ export default function App() {
   ];
 
   const landRows = [
-    { label: "지목", value: v.jimok, note: v.jimokNote },
-    { label: "면적", value: sp(v.area), note: v.areaNote },
-    { label: "소유구분", value: v.owner, note: v.ownerNote },
-    { label: "이용상황", value: v.usage, note: v.usageNote },
+    { label: "지목", value: land.jimok },
+    { label: "면적", value: land.area, note: land.areaPyeong },
+    { label: "소유구분", value: land.owner },
   ];
 
   return (
@@ -193,19 +197,19 @@ export default function App() {
       {sel && (
         <div style={{ maxWidth: 1180, margin: "0 auto", padding: "48px 32px 0", display: "flex", flexDirection: "column", gap: 64 }}>
           <SummarySection items={summaryItems} />
-          <ZoneSection status={st.zone} use={v.use} ruleIndices={v.rules} />
+          <ZoneSection status={st.zone} use={zone.use} rules={zone.rules} />
           <LandSection status={st.land} rows={landRows} onRetry={() => retry("land")} />
           <BuildingSection
             status={st.bld}
-            struct={v.struct}
-            purpose={v.purpose}
-            siteArea={sp(v.area)}
-            buildArea={sp(v.buildArea)}
-            bcr={v.bcrReal}
-            far={v.farReal}
-            approved={v.approved}
-            floorSummary={v.summary}
-            floors={v.floors}
+            struct={building.struct}
+            purpose={building.purpose}
+            siteArea={building.siteArea}
+            buildArea={building.buildArea}
+            bcr={building.bcr}
+            far={building.far}
+            approved={building.approved}
+            floorSummary={building.floorSummary}
+            floors={building.floors}
             onRetry={() => retry("bld")}
           />
           <PriceSection

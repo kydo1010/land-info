@@ -1,14 +1,11 @@
-import { RULES } from "../data/mockData.js";
-
 const TAG_STYLE = {
   저촉: { bg: "#F6E7E0", fg: "#8E3B21" },
   접함: { bg: "#EFEDE5", fg: "#6B665E" },
   해당: { bg: "#E7EFEC", fg: "#1F4B43" },
 };
 
-export default function ZoneSection({ status, use, ruleIndices }) {
+export default function ZoneSection({ status, use, rules }) {
   const loading = status === "loading";
-  const rules = ruleIndices.map((ri) => RULES[ri]);
   const counts = ["해당", "저촉", "접함"].map((kind) => {
     const n = rules.filter((r) => r.kind === kind).length;
     return { kind, count: n + "건", color: n ? "#171614" : "#C9C3B6", ...TAG_STYLE[kind] };
@@ -84,7 +81,7 @@ export default function ZoneSection({ status, use, ruleIndices }) {
                 저촉·해당 규제 {rules.length}건
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 1, background: "#EDEAE2" }}>
-                {rules.map((r, i) => (
+  {rules.map((r) => (
                   <div
                     key={r.name}
                     style={{
@@ -95,9 +92,7 @@ export default function ZoneSection({ status, use, ruleIndices }) {
                       gap: 14,
                     }}
                   >
-                    <span style={{ fontSize: 10.5, color: "#8C877E", width: 22 }}>
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
+                    <span style={{ fontSize: 10.5, color: "#8C877E", width: 22 }}>{r.no}</span>
                     <span
                       style={{
                         fontSize: 11.5,
