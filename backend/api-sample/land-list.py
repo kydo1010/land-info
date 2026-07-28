@@ -1,0 +1,26 @@
+# python 샘플 코드
+# 토지임야목록
+from urllib.error import HTTPError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
+
+from _common import load_env_key
+
+url = "https://api.vworld.kr/ned/data/ladfrlList"
+query_params = "?" + urlencode({
+    "key": load_env_key("VWORLD_API_KEY"),
+    "pnu": "1165010800113320002",  # 고유번호
+    "format": "json",  # 응답결과 형식(xml 또는 json)
+    "numOfRows": "10",  # 검색건수 (최대 1000)
+    "pageNo": "1",  # 페이지 번호
+})
+
+request = Request(url + query_params)
+request.get_method = lambda: "GET"
+
+try:
+    response_body = urlopen(request).read()
+except HTTPError as e:
+    response_body = e.read()
+
+print(response_body.decode("utf-8"))
