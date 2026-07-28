@@ -1,0 +1,87 @@
+* {
+  box-sizing: border-box;
+}
+html {
+  scroll-behavior: smooth;
+}
+body {
+  margin: 0;
+  background: #ffffff;
+  -webkit-font-smoothing: antialiased;
+}
+a {
+  color: #1f4b43;
+  text-decoration: none;
+}
+a:hover {
+  color: #14302b;
+  text-decoration: underline;
+}
+input::placeholder {
+  color: #a6a19a;
+}
+
+@keyframes shimmer {
+  0% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.45;
+  }
+}
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.shimmer {
+  animation: shimmer 1.3s ease-in-out infinite;
+}
+.rise-in {
+  animation: riseIn 0.18s ease-out;
+}
+
+/* interactive hover states (design uses style-hover; translated to real CSS here) */
+.btn-search:hover {
+  background: #14302b !important;
+}
+.btn-retry:hover {
+  border-color: #171614 !important;
+}
+.btn-example:hover {
+  border-color: #1f4b43 !important;
+  color: #1f4b43 !important;
+}
+.pill:hover {
+  border-color: #1f4b43 !important;
+  text-decoration: none !important;
+}
+.candidate-row:hover {
+  background: #f4f2ec !important;
+}
+.new-tab-btn:hover {
+  background: #cfc9bb !important;
+}
+.tab-close:hover {
+  background: #d0cabc !important;
+  color: #171614 !important;
+}
+.tab-item.is-active:hover {
+  background: #f4f2ec !important;
+}
+.tab-item.is-inactive:hover {
+  background: #e5e1d7 !important;
+}
+.search-input:focus {
+  border-color: #1f4b43 !important;
+  box-shadow: 0 0 0 3px rgba(31, 75, 67, 0.09);
+}
