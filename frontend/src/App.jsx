@@ -134,7 +134,7 @@ export default function App() {
   });
 
   const dash = "—";
-  const zoneRuleKinds = ["해당", "저촉", "접함"].map((kind) => zone.rules.filter((r) => r.kind === kind).length + "건 " + kind).join(" · ");
+  const zoneRuleKinds = ["포함", "저촉", "접합"].map((kind) => zone.rules.filter((r) => r.kind === kind).length + "건 " + kind).join(" · ");
   const summaryItems = [
     { label: "토지이용계획", value: st.zone === "ok" ? zone.use : dash, sub: zoneRuleKinds, ready: st.zone === "ok" },
     { label: "토지대장", value: st.land === "ok" ? land.area : dash, sub: `지목 ${land.jimok} · ${land.owner}`, ready: st.land === "ok" },
