@@ -1,5 +1,6 @@
 export default function LandSection({ status, rows, onRetry }) {
   const loading = status === "loading";
+  const empty = status === "empty";
   const error = status === "error";
 
   return (
@@ -31,6 +32,14 @@ export default function LandSection({ status, rows, onRetry }) {
             ))}
           </div>
         )}
+        {empty && (
+          <div style={{ padding: "46px 26px", textAlign: "center" }}>
+            <div style={{ width: 34, height: 34, margin: "0 auto 14px", border: "1.5px dashed #C9C3B6" }} />
+            <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-.02em" }}>토지대장 정보를 찾을 수 없습니다</div>
+            <div style={{ fontSize: 13, color: "#8C877E", marginTop: 6 }}>이 필지의 토지·임야정보가 등록돼 있지 않습니다.</div>
+          </div>
+        )}
+
         {error && (
           <div style={{ padding: "34px 26px", display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
             <div style={{ fontSize: 14, color: "#8E3B21" }}>토지대장 조회 중 오류가 발생했습니다. (502 Bad Gateway)</div>

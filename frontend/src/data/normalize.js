@@ -1,10 +1,9 @@
 // 공공 API 원본 응답을 화면에 쓰기 좋은 형태로 바꾼다.
-// 토지대장·토지이용계획은 이제 프론트에서 VWorld를 JSONP로 직접 호출해 받은 실제 응답(api/vworld.js)을
-// 그대로 넘겨받아 변환한다. 건축물대장은 아직 건축HUB 연동 전이라 apiFixtures.js 목업을 그대로 쓴다.
-import { BR_TITLE_RESPONSE, BR_FLR_OULN_RESPONSE } from "./apiFixtures.js";
+// 토지대장·토지이용계획·개별공시지가는 프론트에서 VWorld를 JSONP로 직접 호출해 받은 실제 응답
+// (api/vworld.js)을 여기서 변환한다. 건축물대장은 백엔드(api/backend.js)의 BuildingRecord가
+// 이미 이 파일과 같은 모양으로 내려오므로(backend/app/schemas/building.py 참조) 별도 변환이 필요 없다.
 import { num, sp } from "../utils/format.js";
 
-const fmtDate = (yyyymmdd) => `${yyyymmdd.slice(0, 4)}-${yyyymmdd.slice(4, 6)}-${yyyymmdd.slice(6, 8)}`;
 const fmtArea = (v) => sp(`${num(Number(v))}㎡`);
 
 // 토지·임야정보 API(ladfrlList) 응답 항목 1건을 화면 표시용으로 변환한다.
@@ -16,33 +15,6 @@ export function normalizeLand(raw) {
     area: fmtArea(raw.lndpclAr),
     areaPyeong: `약 ${(areaSqm * 0.3025).toLocaleString("en-US", { maximumFractionDigits: 1 })}평`,
     owner: raw.posesnSeCodeNm,
-  };
-}
-
-export function normalizeBuilding(pnu) {
-  const title = BR_TITLE_RESPONSE[pnu];
-  if (!title || title.totalCount === "0" || !title.item) {
-    return { status: "empty" };
-  }
-  const t = title.item;
-  const flr = BR_FLR_OULN_RESPONSE[pnu];
-  const floors = (flr?.items || []).map((f) => ({
-    floor: `${f.flrGbCdNm} ${f.flrNoNm}`,
-    purpose: f.mainPurpsCdNm,
-    struct: f.strctCdNm,
-    area: Number(f.area).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-  }));
-  return {
-    status: "ok",
-    struct: t.strctCdNm,
-    purpose: t.mainPurpsCdNm,
-    siteArea: fmtArea(t.platArea),
-    buildArea: fmtArea(t.archArea),
-    bcr: sp(`${t.bcRat}%`),
-    far: sp(`${t.vlRat}%`),
-    approved: fmtDate(t.useAprDay),
-    floorSummary: sp(`지하 ${t.ugrndFlrCnt}층 / 지상 ${t.grndFlrCnt}층 · 연면적 ${fmtArea(t.totArea)}`),
-    floors,
   };
 }
 

@@ -83,7 +83,7 @@ export default function PriceSection({
             </div>
           </div>
           <div style={{ fontSize: 11.5, color: "#A6A19A", marginTop: 10, lineHeight: 1.6 }}>
-            좌표 출처 API는 명세 확보 후 확정 예정 <span>TBD</span>
+            좌표는 VWorld Geocoder(주소 문자열 기반) — 지도 위 위치 표시는 목업이며, 실제 지도 라이브러리는 미정(11장 참조)
           </div>
         </div>
 

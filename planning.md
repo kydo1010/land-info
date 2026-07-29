@@ -313,6 +313,15 @@ pills는 콘텐츠를 전환하는 탭이 아니라, 아래 섹션으로 스크�
 - **개별공시지가(`getIndvdLandPrice`)**: ⚠️ **필지 단위 조회가 불가능함이 확정**됐다. 응답 항목(서초동 기준 75건)에 지번(`mnnmSlno`)이나 PNU에 해당하는 필드가 전혀 없고, `ldCode`(법정동) 하나에 대해 지목×용도지역 조합별 통계가 통째로 내려온다 — 11장 미결정 사항 1번의 답은 "불가능"으로 확정. 성공 시 래퍼도 `{"statelndvdLandPrices": {"field": [...]}}`이고, 데이터가 없는 연도는 다른 래퍼(`{"response": {"totalCount": "0", ...}}`)로 내려온다는 것도 확인. 또한 테스트한 법정동은 `stdrYear=2022`까지만 데이터가 있고 2023~2025년은 `totalCount: 0`이었다 — 공공데이터 반영 시차가 있는 것으로 보인다.
 - F-04(공시지가 트래커)는 원래 기획대로 "특정 필지의 5개년 공시지가"를 보여줄 수 없다 — **재설계 필요**(예: 법정동 단위 목록만 보여주거나, 응답의 `lndcgrCode`/`prposArea` 등으로 대상 필지와 최대한 근사 매칭하는 방식). 어느 쪽으로 갈지는 결정 필요.
 
+### 8-6. F-01·F-03·F-04 좌표 백엔드 연동 + 건축HUB 실제 호출로 발견한 것들 (2026-07-29)
+
+주소 검색(F-01, juso.go.kr), 건축물대장(F-03, 건축HUB), 지도 좌표(F-04, VWorld Geocoder)를 실제로 백엔드에 연동했다. `app/main.py`(그 전까지 존재하지 않았음), `app/routers/address.py`·`building.py`·`coordinates.py`, `app/services/building_service.py`를 새로 만들었다. juso.go.kr·apis.data.go.kr는 vworld.kr과 무관한 별도 호스트라 당연히 8-5의 JSONP 예외를 적용하지 않았고, Geocoder도 같은 vworld.kr 호스트이지만 `ned/data`(국가중점데이터) 경로가 아니라 `req/address` 경로라 원래 설계대로 백엔드 경유로 붙였다 — 단, 배포 서버의 vworld.kr 차단이 특정 경로가 아니라 호스트 전체에 걸린 것이라면 이 경로도 막힐 수 있어, 배포 후 안 되면 VWorld 3종과 같은 JSONP 우회를 검토해야 한다(로컬 테스트로는 배포 서버의 차단 여부를 확인할 수 없다).
+
+- **건축HUB는 `Accept: application/json` 헤더가 없으면 HTTP 200에 빈 바디를 반환한다** — 에러도 없이 그냥 아무 내용이 없어서 처음엔 원인 파악이 안 됐다(`api-sample/building-title.py`/`building-floors.py` 작성 중 발견). `httpx`는 기본으로 `Accept: */*`를 보내는데, 이걸로는 실제로 문제가 안 됐다(백엔드 `clients/building_client.py`는 정상 응답을 받음) — 빈 바디는 `Accept` 헤더가 아예 없을 때만 재현됐다.
+- **`BrTitleItem`/`BrFlrOulnItem` 스키마 버그 확정**: `platArea`/`archArea`/`totArea`/`bcRat`/`vlRat`/`grndFlrCnt`/`ugrndFlrCnt`/`area`가 문서상 추정과 달리 실제로는 문자열이 아니라 **JSON 숫자(float/int)**로 내려온다. 기존 스키마는 전부 `str`로 선언돼 있어 실제 호출 시 pydantic이 `ValidationError`를 내며 무조건 실패했다 — `float`/`int`로 수정(pydantic의 lax 모드가 문자열로 오는 경우도 함께 받아주므로 더 안전함). `useAprDay`는 실제로도 문자열이라 그대로 둠.
+- 건축HUB 응답이 이따금 "Error receiving response from backend server"로 실패하는 경우가 있었는데, 재시도하면 정상 응답을 받았다 — data.go.kr 서버 쪽의 일시적 불안정으로 보이며 우리 쪽 코드 문제는 아니다.
+- 실제 검색 결과로 얻은 PNU는 항상 VWorld에 매칭 레코드가 있는 게 아니다(예: 강남파이낸스센터의 실제 파생 PNU `1168010100007370000`은 `ladfrlList`에서 `totalCount: 0`) — 목업 시절엔 4개 후보를 전부 매칭되게 손으로 골라뒀어서 이 "데이터 없음" 케이스가 한 번도 실제로 렌더링된 적이 없었다. `LandSection.jsx`에 `empty` 상태 UI가 아예 없어서 빈 화면으로 보이는 걸 이번에 발견해 추가했다(`BuildingSection.jsx`의 `empty` UI와 동일한 패턴).
+
 ---
 
 ## 9. 백엔드 API 설계 (초안)
@@ -324,12 +333,12 @@ pills는 콘텐츠를 전환하는 탭이 아니라, 아래 섹션으로 스크�
 
 | 메서드 | 경로 | 설명 |
 | --- | --- | --- |
-| GET | `/api/address/search?q=` | 주소 검색, 후보 목록 반환 |
+| GET | `/api/address/search?q=` | 주소 검색, 후보 목록 반환 — **구현 완료(2026-07-29)** |
 | ~~GET~~ | ~~`/api/land/{필지식별자}`~~ | 토지대장 — 프론트가 VWorld 직접 호출로 대체(7장 참조) |
-| GET | `/api/building/{필지식별자}` | 건축물대장 |
+| GET | `/api/building?sigunguCd=&bjdongCd=&platGbCd=&bun=&ji=` | 건축물대장 — **구현 완료(2026-07-29)**, 식별자 5개가 계층적 리소스가 아니라 평평한 값이라 경로 대신 쿼리 파라미터로 확정 |
 | ~~GET~~ | ~~`/api/land-price?ldCode=`~~ | 공시지가 — 프론트가 VWorld 직접 호출로 대체(7장 참조) |
 | ~~GET~~ | ~~`/api/land-use/{필지식별자}`~~ | 토지이용계획 — 프론트가 VWorld 직접 호출로 대체(7장 참조) |
-| GET | `/api/coordinates?address=` | 지도 표시용 좌표 (VWorld Geocoder 경유) |
+| GET | `/api/coordinates?address=` | 지도 표시용 좌표 (VWorld Geocoder 경유) — **구현 완료(2026-07-29)** |
 
 ### 공통 규약
 
@@ -391,27 +400,29 @@ pills는 콘텐츠를 전환하는 탭이 아니라, 아래 섹션으로 스크�
 
 ### Phase 1 — 기반 구축
 
-- FastAPI 프로젝트 골격, React + Vite 프로젝트 골격
-- 공통 응답 규약 및 오류 처리 구조
-- 공공 API Client 레이어 뼈대
+- ~~FastAPI 프로젝트 골격~~ → 완료(2026-07-29): `app/main.py`(CORS, `ExternalAPIError` 전역 핸들러) 신규 작성
+- React + Vite 프로젝트 골격 — 완료(목업 단계에서 이미 구축)
+- 공통 응답 규약 및 오류 처리 구조 — 완료(`schemas/envelope.py`, `errors.py`)
+- 공공 API Client 레이어 뼈대 — 완료(6종 전부 client 모듈 존재)
 
 ### Phase 2 — 주소 검색
 
-- F-01 구현 (백엔드 검색 엔드포인트 + 프론트 검색 / 목록 선택 UI)
-- 필지 선택 후 상태 관리 흐름 확립
+- ~~F-01 구현~~ → 완료(2026-07-29): `app/routers/address.py` + 프론트 `api/backend.js`의 `searchAddress()`로 실제 juso.go.kr 결과 연동, 목업(`mockData.js`) 삭제
+- 필지 선택 후 상태 관리 흐름 확립 — 완료
 
 ### Phase 3 — 4종 조회
 
-- F-05 토지이용계획
-- F-02 토지대장
-- F-03 건축물대장
-- F-04 공시지가 (법정동 단위 재설계 반영, 데이터 조회까지)
-- 보고서 레이아웃(섹션 순서 배치) 및 앵커 내비게이션(pills), 섹션별 독립 상태 처리
+- F-05 토지이용계획 — 완료(VWorld JSONP 직접 호출, 8-5)
+- F-02 토지대장 — 완료(VWorld JSONP 직접 호출, 8-5)
+- ~~F-03 건축물대장~~ → 완료(2026-07-29): `app/routers/building.py` + `app/services/building_service.py` + 프론트 `fetchBuilding()`로 실제 건축HUB 데이터 연동, 목업(`apiFixtures.js`) 삭제 — 8-6 참조
+- F-04 공시지가 (법정동 단위 재설계 반영, 데이터 조회까지) — 완료
+- 보고서 레이아웃(섹션 순서 배치) 및 앵커 내비게이션(pills), 섹션별 독립 상태 처리 — 완료
 
 ### Phase 4 — 차트 · 지도
 
-- F-04 법정동 평균 공시지가 꺾은선 차트 + 연도별 세부 내역 표 (기존 필지 단위 목업 교체)
-- F-04 지도 UI (좌: 지도, 우: 차트 배치)
+- F-04 법정동 평균 공시지가 꺾은선 차트 + 연도별 세부 내역 표 (기존 필지 단위 목업 교체) — 완료
+- ~~F-04 좌표 연동~~ → 완료(2026-07-29): `/api/coordinates`(Geocoder) 실제 연동, 지도 라벨에 실좌표 표시 — 8-6 참조
+- F-04 지도 UI 자체(좌표를 실제 지도에 핀으로 표시)는 여전히 목업 — 11장 미결정 사항(지도 라이브러리 선정, Leaflet 등) 확정 후 구현
 
 ### Phase 5 — 마감
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Header from "./components/Header.jsx";
 import EmptyState from "./components/EmptyState.jsx";
 import SummarySection from "./components/SummarySection.jsx";
@@ -6,10 +6,10 @@ import ZoneSection from "./components/ZoneSection.jsx";
 import LandSection from "./components/LandSection.jsx";
 import BuildingSection from "./components/BuildingSection.jsx";
 import PriceSection from "./components/PriceSection.jsx";
-import { CANDS } from "./data/mockData.js";
-import { normalizeLand, normalizeBuilding, normalizeZone, normalizePrice } from "./data/normalize.js";
+import { normalizeLand, normalizeZone, normalizePrice } from "./data/normalize.js";
 import { buildChart } from "./utils/format.js";
 import { fetchLadfrl, fetchLandUse, fetchLandPriceByYears, ldCodeFromPnu } from "./api/vworld.js";
+import { searchAddress, fetchBuilding, fetchCoordinates } from "./api/backend.js";
 
 const SECTION_IDS = ["summary", "zone", "land", "bld", "price"];
 
@@ -20,13 +20,12 @@ function timestamp() {
 }
 
 export default function App() {
-  const [query, setQuery] = useState("역삼동 737");
+  const [query, setQuery] = useState("");
   const [search, setSearch] = useState("idle");
+  const [candidates, setCandidates] = useState([]);
   const [tabs, setTabs] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [activeSection, setActiveSection] = useState("summary");
-
-  const timersRef = useRef({});
 
   const patch = (id, obj) => {
     setTabs((prev) => prev.map((t) => (t.id === id ? { ...t, ...obj } : t)));
@@ -66,13 +65,28 @@ export default function App() {
       .catch(() => patch(id, { price: "error" }));
   };
 
+  // 건축물대장(F-03)은 juso.go.kr·건축HUB와 마찬가지로 배포 서버에서 차단된 적이 없어
+  // 원래 설계대로 백엔드(FastAPI)를 거친다(api/backend.js) — VWorld 3종과는 다른 경로.
+  const loadBuilding = (id, cand) => {
+    fetchBuilding({ sigunguCd: cand.sigunguCd, bjdongCd: cand.bjdongCd, platGbCd: cand.platGbCd, bun: cand.bun, ji: cand.ji })
+      .then((record) => patch(id, { bld: record.status, buildingInfo: record }))
+      .catch(() => patch(id, { bld: "error" }));
+  };
+
+  // F-04 지도 좌표(Geocoder) — 선택된 주소 문자열을 그대로 넣어 얻는다(8-1 참조, PNU 불필요).
+  // 4종 섹션과 달리 지도 위 보조 표시일 뿐이라 별도 status는 두지 않고, 실패하면 조용히 "—"로 남긴다.
+  const loadCoordinates = (id, cand) => {
+    fetchCoordinates(cand.road)
+      .then((coords) => patch(id, { coords }))
+      .catch(() => {});
+  };
+
   const selectPriceYear = (id, year) => patch(id, { priceYear: year });
 
-  const select = (c, quiet = false) => {
+  const select = (c) => {
     const id = c.pnu;
     const alreadyOpen = tabs.some((t) => t.id === id);
     if (!alreadyOpen) {
-      const bldStatus = normalizeBuilding(id).status;
       const tab = {
         id,
         cand: c,
@@ -85,29 +99,22 @@ export default function App() {
         priceChart: null,
         priceInfo: null,
         priceYear: null,
+        buildingInfo: null,
+        coords: null,
         fetchedAt: timestamp(),
       };
       setTabs((prev) => (prev.some((t) => t.id === id) ? prev : [...prev, tab]));
-      timersRef.current[id] = [setTimeout(() => patch(id, { bld: bldStatus }), 1900)];
       loadLand(id);
       loadZone(id);
       loadPrice(id);
+      loadBuilding(id, c);
+      loadCoordinates(id, c);
     }
     setActiveId(id);
     setSearch("idle");
     setQuery(c.jibun);
-    if (!quiet) window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
-
-  const didAutoSelect = useRef(false);
-  // 데모용: 첫 진입 시 기본 주소 하나를 자동으로 선택해 화면을 바로 보여준다.
-  // 실제 백엔드 연동 후에는 이 자동 선택을 제거하고 빈 검색창으로 시작하면 된다.
-  useEffect(() => {
-    if (didAutoSelect.current) return;
-    didAutoSelect.current = true;
-    select(CANDS[0], true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   useEffect(() => {
     const onScroll = () => {
@@ -123,8 +130,6 @@ export default function App() {
   }, []);
 
   const closeTab = (id) => {
-    (timersRef.current[id] || []).forEach(clearTimeout);
-    delete timersRef.current[id];
     const i = tabs.findIndex((t) => t.id === id);
     const next = tabs.filter((t) => t.id !== id);
     setTabs(next);
@@ -134,13 +139,27 @@ export default function App() {
   };
 
   const newTab = () => {
-    setSearch("results");
     setQuery("");
+    setSearch("idle");
+    setCandidates([]);
   };
 
-  const runSearch = () => {
+  // qOverride: EmptyState의 예시 버튼처럼 setQuery 직후 바로 검색해야 할 때, setQuery의 상태
+  // 반영을 기다리지 않고 그 값으로 바로 검색하기 위해 받는다(state 클로저 지연 문제 회피).
+  const runSearch = (qOverride) => {
+    const q = (qOverride ?? query).trim();
+    if (!q) {
+      setSearch("none");
+      setCandidates([]);
+      return;
+    }
     setSearch("loading");
-    setTimeout(() => setSearch(query.trim() ? "results" : "none"), 320);
+    searchAddress(q)
+      .then((results) => {
+        setCandidates(results);
+        setSearch(results.length ? "results" : "none");
+      })
+      .catch(() => setSearch("error"));
   };
 
   const retry = (key) => {
@@ -149,8 +168,10 @@ export default function App() {
     if (key === "land") return loadLand(activeId);
     if (key === "zone") return loadZone(activeId);
     if (key === "price") return loadPrice(activeId);
-    const t = setTimeout(() => patch(activeId, { [key]: "ok" }), 900);
-    timersRef.current[activeId] = [...(timersRef.current[activeId] || []), t];
+    if (key === "bld") {
+      const t = tabs.find((x) => x.id === activeId);
+      if (t) loadBuilding(activeId, t.cand);
+    }
   };
 
   const goTo = (id) => {
@@ -160,10 +181,9 @@ export default function App() {
 
   const tab = tabs.find((t) => t.id === activeId) || null;
   const sel = tab ? tab.cand : null;
-  const pnu = sel ? sel.pnu : CANDS[0].pnu;
   const land = tab ? tab.landInfo : null;
   const zone = tab ? tab.zoneInfo : null;
-  const building = normalizeBuilding(pnu);
+  const building = tab ? tab.buildingInfo : null;
   const st = tab || { zone: "idle", land: "idle", bld: "idle", price: "idle" };
 
   const chart = tab ? tab.priceChart : null;
@@ -191,9 +211,9 @@ export default function App() {
     { label: "토지이용계획", value: st.zone === "ok" ? zone.use : dash, sub: zoneRuleKinds, ready: st.zone === "ok" },
     {
       label: "토지대장",
-      value: st.land === "ok" ? land.area : dash,
-      sub: st.land === "ok" ? `지목 ${land.jimok} · ${land.owner}` : "조회 중",
-      ready: st.land === "ok",
+      value: st.land === "ok" ? land.area : st.land === "empty" ? "정보 없음" : dash,
+      sub: st.land === "ok" ? `지목 ${land.jimok} · ${land.owner}` : st.land === "empty" ? "등록된 토지대장 없음" : "조회 중",
+      ready: st.land === "ok" || st.land === "empty",
     },
     {
       label: "건축물대장",
@@ -235,9 +255,9 @@ export default function App() {
         onKeyDown={(e) => {
           if (e.key === "Enter") runSearch();
         }}
-        onSearch={runSearch}
+        onSearch={() => runSearch()}
         searchState={search}
-        candidates={CANDS}
+        candidates={candidates}
         onPickCandidate={select}
         sel={sel ? { road: sel.road, jibun: sel.jibun, pnu: sel.pnu } : null}
         activeSection={activeSection}
@@ -248,7 +268,7 @@ export default function App() {
         <EmptyState
           onUseExample={(label) => {
             setQuery(label);
-            runSearch();
+            runSearch(label);
           }}
         />
       )}
@@ -260,21 +280,21 @@ export default function App() {
           <LandSection status={st.land} rows={landRows} onRetry={() => retry("land")} />
           <BuildingSection
             status={st.bld}
-            struct={building.struct}
-            purpose={building.purpose}
-            siteArea={building.siteArea}
-            buildArea={building.buildArea}
-            bcr={building.bcr}
-            far={building.far}
-            approved={building.approved}
-            floorSummary={building.floorSummary}
-            floors={building.floors}
+            struct={building?.struct}
+            purpose={building?.purpose}
+            siteArea={building?.siteArea}
+            buildArea={building?.buildArea}
+            bcr={building?.bcr}
+            far={building?.far}
+            approved={building?.approved}
+            floorSummary={building?.floorSummary}
+            floors={building?.floors || []}
             onRetry={() => retry("bld")}
           />
           <PriceSection
             status={st.price}
             selShort={sel.jibun.split(" ").slice(-2).join(" ")}
-            selCoords={`${sel.lat}, ${sel.lng}`}
+            selCoords={tab?.coords ? `${tab.coords.lat}, ${tab.coords.lng}` : "—"}
             chart={chart}
             ldCodeNm={tab?.priceInfo?.ldCodeNm}
             ldCode={tab?.priceInfo?.ldCode}
