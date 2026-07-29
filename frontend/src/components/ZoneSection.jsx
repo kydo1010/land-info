@@ -1,12 +1,14 @@
+// VWorld getLandUseAttr 응답의 cnflcAtNm 실제 값(포함/저촉/접함) 기준 — planning.md 8-1의
+// "접합" 표기는 오타였고 실제 응답은 "접함"임을 실제 호출로 확인했다(8-5 참조).
 const TAG_STYLE = {
   저촉: { bg: "#F6E7E0", fg: "#8E3B21" },
   접함: { bg: "#EFEDE5", fg: "#6B665E" },
-  해당: { bg: "#E7EFEC", fg: "#1F4B43" },
+  포함: { bg: "#E7EFEC", fg: "#1F4B43" },
 };
 
 export default function ZoneSection({ status, use, rules }) {
   const loading = status === "loading";
-  const counts = ["해당", "저촉", "접함"].map((kind) => {
+  const counts = ["포함", "저촉", "접함"].map((kind) => {
     const n = rules.filter((r) => r.kind === kind).length;
     return { kind, count: n + "건", color: n ? "#171614" : "#C9C3B6", ...TAG_STYLE[kind] };
   });
@@ -78,7 +80,7 @@ export default function ZoneSection({ status, use, rules }) {
             </div>
             <div style={{ padding: "22px 26px 26px" }}>
               <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em", marginBottom: 12 }}>
-                저촉·해당 규제 {rules.length}건
+                저촉·포함 규제 {rules.length}건
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 1, background: "#EDEAE2" }}>
   {rules.map((r) => (

@@ -258,7 +258,7 @@ pills는 콘텐츠를 전환하는 탭이 아니라, 아래 섹션으로 스크�
 
 **토지이용계획 API** — `https://api.vworld.kr/ned/data/getLandUseAttr` (2026-07-27 Chrome DevTools로 실제 레퍼런스 페이지 재확인)
 - 식별 파라미터: `pnu` (고유번호, 필수), `key` (인증키, 필수) — 토지·임야정보 API와 **동일하게 `pnu` 기반**. 응답 샘플의 `pnu`가 19자리(`1165010800113320002`)인 것도 확인 — 8-1 도로명주소 항목의 "법정동코드10+산여부1+본번4+부번4=19자리" 추정을 뒷받침함
-- 옵션: `cnflcAt`(저촉여부코드: 1 포함/2 저촉/3 접합), `prposAreaDstrcCodeNm`(용도지역지구명), `format`, `numOfRows`, `pageNo`, `domain`
+- 옵션: `cnflcAt`(저촉여부코드: 1 포함/2 저촉/3 접함 — 문서엔 "접합"으로 나와 있었으나 실제 응답은 "접함"임을 8-5 실제 호출로 확인), `prposAreaDstrcCodeNm`(용도지역지구명), `format`, `numOfRows`, `pageNo`, `domain`
 - **응답 필드 전체(레퍼런스 페이지에 명시된 전부)**: `pnu`(고유번호), `ldCode`(법정동코드), `ldCodeNm`(법정동명), `regstrSeCode`/`regstrSeCodeNm`(대장구분코드/명, 예: "토지대장"), `mnnmSlno`(지번), `manageNo`(도면번호), `cnflcAt`/`cnflcAtNm`(저촉여부코드/명), `prposAreaDstrcCode`/`prposAreaDstrcCodeNm`(용도지역지구코드/명), `registDt`(등록일자), `lastUpdtDt`(데이터기준일자)
 - **건폐율·용적률·규제사항 필드는 이 API에 없다는 것이 확정됨.** 응답 항목이 위 10개가 전부이며, 페이지 어디에도 건폐율·용적률에 해당하는 필드가 없다. F-05를 채우려면 **다른 API나 데이터 출처가 필요** — VWorld의 "국가중점데이터 컬럼정의서" 다운로드나 별도 서비스(예: 토지이용규제정보서비스 luris.molit.go.kr)를 확인해야 한다
 - 일일 호출 제한 "999,999,999" 재확인됨(오퍼레이션 페이지에 "제공가능 트래픽"으로 명시) — 사실상 무제한에 가까운 기본 할당치로 보임

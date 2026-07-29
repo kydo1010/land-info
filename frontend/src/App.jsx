@@ -174,7 +174,7 @@ export default function App() {
   });
 
   const zoneRuleKinds = zone
-    ? ["포함", "저촉", "접합"].map((kind) => zone.rules.filter((r) => r.kind === kind).length + "건 " + kind).join(" · ")
+    ? ["포함", "저촉", "접함"].map((kind) => zone.rules.filter((r) => r.kind === kind).length + "건 " + kind).join(" · ")
     : "";
   const summaryItems = [
     { label: "토지이용계획", value: st.zone === "ok" ? zone.use : dash, sub: zoneRuleKinds, ready: st.zone === "ok" },
