@@ -6,9 +6,9 @@ import ZoneSection from "./components/ZoneSection.jsx";
 import LandSection from "./components/LandSection.jsx";
 import BuildingSection from "./components/BuildingSection.jsx";
 import PriceSection from "./components/PriceSection.jsx";
-import { normalizeLand, normalizeZone, normalizePrice } from "./data/normalize.js";
+import { normalizeLand, normalizeZone, normalizePriceRows } from "./data/normalize.js";
 import { buildChart } from "./utils/format.js";
-import { fetchLadfrl, fetchLandUse, fetchLandPriceByYears, fetchCoordinates, ldCodeFromPnu } from "./api/vworld.js";
+import { fetchLadfrl, fetchLandUse, fetchLandPriceHistory, fetchCoordinates } from "./api/vworld.js";
 import { searchAddress, fetchBuilding } from "./api/backend.js";
 
 const SECTION_IDS = ["summary", "zone", "land", "bld", "price"];
@@ -45,22 +45,15 @@ export default function App() {
       .catch(() => patch(id, { zone: "error" }));
   };
 
-  // 개별공시지가는 필지 단위 조회가 불가능해 법정동(ldCode) 단위로 재설계됐다(planning.md 8-5, F-04 참조).
+  // 개별공시지가 — getIndvdLandPriceAttr로 필지(pnu) 단위 조회가 가능함이 확인됐다(8-8 참조).
   const loadPrice = (id) => {
-    const ldCode = ldCodeFromPnu(id);
     const thisYear = new Date().getFullYear();
     const years = Array.from({ length: 5 }, (_, i) => thisYear - 4 + i);
-    fetchLandPriceByYears(ldCode, years)
-      .then((yearItems) => {
-        const info = normalizePrice(yearItems);
-        const hasAny = info.rows.some((r) => r.value != null);
-        const latestYearWithData = [...years].reverse().find((y) => (info.breakdownByYear[y] || []).length > 0) ?? years[years.length - 1];
-        patch(id, {
-          price: hasAny ? "ok" : "empty",
-          priceChart: hasAny ? buildChart(info.rows) : null,
-          priceInfo: info,
-          priceYear: latestYearWithData,
-        });
+    fetchLandPriceHistory(id)
+      .then((records) => {
+        const rows = normalizePriceRows(records, years);
+        const hasAny = rows.some((r) => r.value != null);
+        patch(id, { price: hasAny ? "ok" : "empty", priceChart: hasAny ? buildChart(rows) : null });
       })
       .catch(() => patch(id, { price: "error" }));
   };
@@ -81,8 +74,6 @@ export default function App() {
       .catch(() => {});
   };
 
-  const selectPriceYear = (id, year) => patch(id, { priceYear: year });
-
   const select = (c) => {
     const id = c.pnu;
     const alreadyOpen = tabs.some((t) => t.id === id);
@@ -97,8 +88,6 @@ export default function App() {
         zoneInfo: null,
         landInfo: null,
         priceChart: null,
-        priceInfo: null,
-        priceYear: null,
         buildingInfo: null,
         coords: null,
         fetchedAt: timestamp(),
@@ -223,9 +212,9 @@ export default function App() {
     },
     {
       label: "공시지가",
-      value: st.price === "ok" ? chart.priceLatest : dash,
-      sub: st.price === "ok" ? `${chart.priceLatestYear} · ${chart.priceDelta.replace("전년 대비 ", "전년비 ")}` : "조회 중",
-      ready: st.price === "ok",
+      value: st.price === "ok" ? chart.priceLatest : st.price === "empty" ? "정보 없음" : dash,
+      sub: st.price === "ok" ? `${chart.priceLatestYear} · ${chart.priceDelta.replace("전년 대비 ", "전년비 ")}` : st.price === "empty" ? "등록된 이력 없음" : "조회 중",
+      ready: st.price === "ok" || st.price === "empty",
     },
   ];
 
@@ -296,12 +285,7 @@ export default function App() {
             selShort={sel.jibun.split(" ").slice(-2).join(" ")}
             selCoords={tab?.coords ? `${tab.coords.lat}, ${tab.coords.lng}` : "—"}
             chart={chart}
-            ldCodeNm={tab?.priceInfo?.ldCodeNm}
-            ldCode={tab?.priceInfo?.ldCode}
-            breakdownYears={tab?.priceChart?.priceRows?.map((r) => r.year) || []}
-            breakdown={(tab?.priceInfo?.breakdownByYear || {})[tab?.priceYear]}
-            selectedYear={tab?.priceYear}
-            onSelectYear={(year) => selectPriceYear(activeId, year)}
+            onRetry={() => retry("price")}
           />
 
           <div style={{ borderTop: "1px solid #E5E1D8", paddingTop: 18, display: "flex", justifyContent: "space-between", fontSize: 11.5, color: "#A6A19A" }}>

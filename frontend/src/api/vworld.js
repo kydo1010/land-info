@@ -18,10 +18,6 @@ function baseParams(extra) {
   return { format: "json", key: KEY, domain: DOMAIN, pageNo: "1", ...extra };
 }
 
-export function ldCodeFromPnu(pnu) {
-  return pnu.slice(0, 10);
-}
-
 // 토지·임야정보 — https://api.vworld.kr/ned/data/ladfrlList
 export async function fetchLadfrl(pnu) {
   const data = await jsonp(`${BASE_URL}/ladfrlList`, baseParams({ pnu, numOfRows: "10" }));
@@ -39,22 +35,15 @@ export async function fetchLandUse(pnu) {
   return root.field || [];
 }
 
-// 개별공시지가 — https://api.vworld.kr/ned/data/getIndvdLandPrice
-// 필지 단위 조회가 불가능함이 확인돼(8-5) 법정동(ldCode) 단위로만 조회한다 — F-04 재설계 참조.
-// 한 해에도 지목×용도지역 조합별로 여러 레코드가 내려온다 — 원본 레코드를 그대로 반환하고,
-// 평균·화면 표시는 호출하는 쪽(normalize.js)에서 처리한다.
-async function fetchLandPriceForYear(ldCode, year) {
-  const data = await jsonp(`${BASE_URL}/getIndvdLandPrice`, baseParams({ ldCode, stdrYear: String(year), reqLvl: "3", numOfRows: "1000" }));
-  const root = data.statelndvdLandPrices || data.response || {};
+// 개별공시지가속성조회 — https://api.vworld.kr/ned/data/getIndvdLandPriceAttr
+// 기존 getIndvdLandPrice(ldCode 기준, 법정동 단위)와 달리 pnu로 필지 단위 조회가 된다 — 8-8 참조.
+// stdrYear를 생략하면 그 필지의 연도별 공시지가 전체 이력이 한 번에 내려온다(같은 연도가 중복으로
+// 내려오는 경우가 있는데 값은 동일하다 — 8-8에서 확인). 프론트에서 최근 5개년만 추려 쓴다.
+export async function fetchLandPriceHistory(pnu) {
+  const data = await jsonp(`${BASE_URL}/getIndvdLandPriceAttr`, baseParams({ pnu, numOfRows: "100" }));
+  const root = data.indvdLandPrices || data.response || {};
   if (root.resultCode) throw new Error(`${root.resultCode}: ${root.resultMsg}`);
   return root.field || [];
-}
-
-// 5개년치를 한 번에 받아 [{year, items}] 형태로 반환한다. items는 해당 연도 법정동 전체의
-// 지목×용도지역 조합별 레코드(빈 배열이면 그 해 데이터 없음).
-export async function fetchLandPriceByYears(ldCode, years) {
-  const itemsByYear = await Promise.all(years.map((year) => fetchLandPriceForYear(ldCode, year)));
-  return years.map((year, i) => ({ year, items: itemsByYear[i] }));
 }
 
 // Geocoder(주소 → 좌표) — https://api.vworld.kr/req/address

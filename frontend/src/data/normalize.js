@@ -35,24 +35,15 @@ export function normalizeZone(items) {
   };
 }
 
-const avgPrice = (items) => (items.length ? Math.round(items.reduce((acc, it) => acc + Number(it.ladPblntfPclnd), 0) / items.length) : null);
-
-// 개별공시지가 API(getIndvdLandPrice) 5개년 원본 응답(api/vworld.js의 fetchLandPriceByYears 결과,
-// [{year, items}])을 화면 표시용으로 변환한다. 필지 단위 조회가 불가능해(8-5 참조) 법정동(ldCode)
-// 단위로 재설계됐다 — rows는 연도별 법정동 평균(buildChart용), breakdownByYear는 연도별 지목·용도지역
-// 조합별 세부 내역이다.
-export function normalizePrice(yearItems) {
-  const withData = yearItems.find((y) => y.items.length > 0);
-  const sample = withData ? withData.items[0] : null;
-  const rows = yearItems.map(({ year, items }) => ({ year, value: avgPrice(items) }));
-  const breakdownByYear = {};
-  yearItems.forEach(({ year, items }) => {
-    breakdownByYear[year] = items.map((it) => ({
-      jimok: it.lndcgrCodeNm,
-      use: it.prposAreaNm,
-      area: fmtArea(it.ladAr),
-      price: it.ladPblntfPclnd ? num(Number(it.ladPblntfPclnd)) : "—",
-    }));
+// 개별공시지가속성조회 API(getIndvdLandPriceAttr) 응답(한 필지의 연도별 이력 전체, api/vworld.js의
+// fetchLandPriceHistory 결과)을 buildChart(rows)에 바로 넣을 수 있는 [{year, value}]로 변환한다.
+// 필지 단위(pnu) 조회가 가능해(8-8 참조) 연도당 값이 정확히 하나뿐이다 — 같은 연도가 중복으로 내려오는
+// 경우 값은 동일하므로 마지막 레코드로 덮어써도 무방하다.
+export function normalizePriceRows(records, years) {
+  const byYear = new Map();
+  records.forEach((r) => byYear.set(r.stdrYear, r));
+  return years.map((year) => {
+    const r = byYear.get(String(year));
+    return { year, value: r ? Number(r.pblntfPclnd) : null };
   });
-  return { ldCode: sample?.ldCode ?? null, ldCodeNm: sample?.ldCodeNm ?? null, rows, breakdownByYear };
 }

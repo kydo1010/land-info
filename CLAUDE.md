@@ -100,7 +100,7 @@ inconsistency.
   results) is its own piece of state now, populated by `runSearch()` calling the real backend — there is no
   static candidate list anymore.
 - `api/backend.js` calls the FastAPI backend (`searchAddress()`, `fetchBuilding()` — only these two); all four
-  VWorld-backed things (`fetchLadfrl()`, `fetchLandUse()`, `fetchLandPriceByYears()`, `fetchCoordinates()`) live
+  VWorld-backed things (`fetchLadfrl()`, `fetchLandUse()`, `fetchLandPriceHistory()`, `fetchCoordinates()`) live
   in `api/vworld.js` + `api/jsonp.js` instead (see exception below). `data/normalize.js` turns raw VWorld JSON
   into the view-model each `*Section.jsx` expects — building doesn't need this step since the backend's
   `BuildingRecord` already comes out in that shape (see `schemas/building.py` note above).
@@ -113,7 +113,7 @@ inconsistency.
   branch, which is a known gap, not an oversight to copy elsewhere.
 
 ### The VWorld-direct-from-browser exception (important, read before touching land/zone/price/coordinates)
-All four VWorld APIs this app uses — 토지·임야정보 (`ladfrlList`), 개별공시지가 (`getIndvdLandPrice`),
+All four VWorld APIs this app uses — 토지·임야정보 (`ladfrlList`), 개별공시지가 (`getIndvdLandPriceAttr`),
 토지이용계획 (`getLandUseAttr`), and Geocoder (`req/address`, used for map coordinates) — are called **directly
 from the browser via JSONP** (`frontend/src/api/jsonp.js` + `frontend/src/api/vworld.js`), bypassing the
 backend entirely. This is not the general pattern for this app — it's a workaround because the deployed
@@ -139,11 +139,14 @@ Quirks specific to this JSONP path, all reproduced empirically (planning.md 8-5,
   *unsuccessful* one (e.g. `INCORRECT_KEY`) comes back as bare, unwrapped JSON despite the same
   `Content-Type` — Chrome's ORB (Cross-Origin Read Blocking) then blocks the script load outright, so failures
   surface as a network error (`net::ERR_BLOCKED_BY_ORB`) rather than a catchable JS error with a message.
-- 개별공시지가 cannot be queried per-parcel (PNU) — VWorld only accepts a 법정동 code (`ldCode`) and returns
-  every 지목×용도지역 record in that 법정동, with no field narrowing it to one parcel. `normalizePrice()` in
-  `normalize.js` averages across records per year for the trend chart and also exposes the raw per-record
-  breakdown; the UI must disclose that this is dong-level, not parcel-level, data (already done in
-  `PriceSection.jsx`).
+- 개별공시지가 has TWO VWorld operations that look interchangeable but aren't: `getIndvdLandPrice` (identified
+  by `ldCode`, a 법정동 only — cannot be narrowed to one parcel, returns every 지목×용도지역 record in that
+  법정동) vs. `getIndvdLandPriceAttr` (identified by `pnu` — genuinely parcel-level, one record per year). This
+  app uses **only `getIndvdLandPriceAttr`** (`fetchLandPriceHistory()` in `api/vworld.js`) — don't "fix" it back
+  to `getIndvdLandPrice`, that was a dead end already tried and abandoned (planning.md 8-5 → 8-8). Omitting
+  `stdrYear` returns the parcel's entire yearly history in one call; the same year can appear more than once
+  with identical values (a re-sync artifact, not a real revision) — `normalizePriceRows()` in `normalize.js`
+  dedupes by `stdrYear` before handing `[{year, value}]` to `buildChart()`.
 - 건축HUB (`apis.data.go.kr`, used by `building_client.py` and `api-sample/building-title.py`/`building-floors.py`)
   silently returns HTTP 200 with an **empty body** if a plain `urllib` request doesn't send an
   `Accept: application/json` header — no error, just nothing (httpx's default `Accept: */*` is fine; this only
@@ -155,9 +158,10 @@ Quirks specific to this JSONP path, all reproduced empirically (planning.md 8-5,
   upstream flakiness, not a bug here.
 
 ### Identifiers
-`pnu` (19 digits) = 법정동코드(10) + 산여부(1: 0=대지/1=산) + 본번(4) + 부번(4). `ldCode` (법정동코드, used by
-the land-price API) is simply `pnu.slice(0, 10)` — see `ldCodeFromPnu()` in `frontend/src/api/vworld.js`.
-건축HUB identifies buildings differently: `sigunguCd` (앞 5 of the 법정동코드) + `bjdongCd` (뒤 5) +
+`pnu` (19 digits) = 법정동코드(10) + 산여부(1: 0=대지/1=산) + 본번(4) + 부번(4) — every VWorld call in this app
+(land, zone, price, and the `ldCode` implicitly embedded in a `pnu`) is keyed off this one value; there's no
+separate ldCode derivation anymore (see the price-API note above). 건축HUB identifies buildings differently:
+`sigunguCd` (앞 5 of the 법정동코드) + `bjdongCd` (뒤 5) +
 `platGbCd`/`bun`/`ji`. `schemas/address.py`'s `to_candidate()` derives *both* identifier schemes from one
 juso.go.kr response (`admCd`/`mtYn`/`lnbrMnnm`/`lnbrSlno`) into a single `AddressCandidate` — that's the one
 place this derivation happens; the frontend never re-derives it.

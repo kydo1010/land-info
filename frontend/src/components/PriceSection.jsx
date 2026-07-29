@@ -1,18 +1,7 @@
-const TAG_COL_STYLE = { display: "grid", gridTemplateColumns: "1fr 1fr 110px 150px" };
-
-export default function PriceSection({
-  status,
-  selShort,
-  selCoords,
-  chart,
-  ldCodeNm,
-  ldCode,
-  breakdownYears,
-  breakdown,
-  selectedYear,
-  onSelectYear,
-}) {
+export default function PriceSection({ status, selShort, selCoords, chart, onRetry }) {
   const loading = status === "loading";
+  const empty = status === "empty";
+  const error = status === "error";
 
   return (
     <section id="price" data-screen-label="공시지가 트래커" style={{ scrollMarginTop: 190 }}>
@@ -21,27 +10,6 @@ export default function PriceSection({
         <h2 style={{ margin: 0, fontSize: 25, fontWeight: 700, letterSpacing: "-.025em" }}>공시지가 트래커</h2>
         <div style={{ fontSize: 14, color: "#8C877E" }}>국토교통부 · 개별공시지가 (최근 5개년)</div>
       </div>
-
-      {status === "ok" && (
-        <div
-          style={{
-            fontSize: 12.5,
-            color: "#6B665E",
-            background: "#F7F5EF",
-            border: "1px solid #EDEAE2",
-            borderRadius: 3,
-            padding: "10px 14px",
-            marginBottom: 14,
-            lineHeight: 1.6,
-          }}
-        >
-          개별공시지가 API는 <strong>필지 단위 조회가 불가능합니다</strong>. 아래 표는 이 주소가 속한 법정동{" "}
-          <strong>
-            {ldCodeNm}({ldCode})
-          </strong>{" "}
-          전체의 통계입니다.
-        </div>
-      )}
 
       <div
         style={{
@@ -169,55 +137,23 @@ export default function PriceSection({
                   <span>데이터가 없는 연도는 선을 끊어 표시합니다.</span>
                 </div>
               )}
+            </div>
+          )}
 
-              <div style={{ marginTop: 26 }}>
-                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
-                  <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em" }}>
-                    {ldCodeNm} 지목·용도지역별 세부 내역
-                  </div>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    {breakdownYears.map((y) => (
-                      <button
-                        key={y}
-                        onClick={() => onSelectYear(y)}
-                        style={{
-                          border: "1px solid " + (y === selectedYear ? "#171614" : "#E5E1D8"),
-                          background: y === selectedYear ? "#171614" : "#FFFFFF",
-                          color: y === selectedYear ? "#FBFAF7" : "#3D3A34",
-                          borderRadius: 999,
-                          padding: "4px 12px",
-                          fontSize: 12.5,
-                          fontFamily: "inherit",
-                          cursor: "pointer",
-                        }}
-                      >
-                        {y}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+          {empty && (
+            <div style={{ height: 300, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+              <div style={{ width: 34, height: 34, marginBottom: 14, border: "1.5px dashed #C9C3B6" }} />
+              <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-.02em" }}>개별공시지가 정보를 찾을 수 없습니다</div>
+              <div style={{ fontSize: 13, color: "#8C877E", marginTop: 6 }}>이 필지의 개별공시지가 이력이 등록돼 있지 않습니다.</div>
+            </div>
+          )}
 
-                {breakdown && breakdown.length > 0 ? (
-                  <div style={{ border: "1px solid #E5E1D8", borderRadius: 3 }}>
-                    <div style={{ ...TAG_COL_STYLE, fontSize: 11.5, color: "#8C877E", padding: "9px 12px", borderBottom: "1px solid #EDEAE2" }}>
-                      <div>지목</div>
-                      <div>용도지역</div>
-                      <div style={{ textAlign: "right" }}>면적</div>
-                      <div style={{ textAlign: "right" }}>공시지가 (원/㎡)</div>
-                    </div>
-                    {breakdown.map((r, i) => (
-                      <div key={i} style={{ ...TAG_COL_STYLE, fontSize: 14, padding: "9px 12px", borderBottom: "1px solid #F3F0E9" }}>
-                        <div>{r.jimok}</div>
-                        <div>{r.use}</div>
-                        <div style={{ textAlign: "right" }}>{r.area}</div>
-                        <div style={{ textAlign: "right" }}>{r.price}</div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: 13, color: "#A6A19A", padding: "14px 2px" }}>{selectedYear}년 데이터가 없습니다.</div>
-                )}
-              </div>
+          {error && (
+            <div style={{ height: 300, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14 }}>
+              <div style={{ fontSize: 14, color: "#8E3B21" }}>공시지가 조회 중 오류가 발생했습니다.</div>
+              <button onClick={onRetry} className="btn-retry" style={retryBtnStyle}>
+                재시도
+              </button>
             </div>
           )}
         </div>
@@ -225,3 +161,13 @@ export default function PriceSection({
     </section>
   );
 }
+
+const retryBtnStyle = {
+  border: "1px solid #C9C3B6",
+  background: "#FFF",
+  padding: "9px 18px",
+  fontSize: 13,
+  fontFamily: "inherit",
+  borderRadius: 2,
+  cursor: "pointer",
+};
