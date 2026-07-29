@@ -85,7 +85,7 @@ export default function ZoneSection({ status, use, rules }) {
               <div style={{ display: "flex", flexDirection: "column", gap: 1, background: "#EDEAE2" }}>
   {rules.map((r) => (
                   <div
-                    key={r.name}
+                    key={r.no}
                     style={{
                       background: "#FFFFFF",
                       padding: "12px 2px",

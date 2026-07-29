@@ -7,9 +7,9 @@ import LandSection from "./components/LandSection.jsx";
 import BuildingSection from "./components/BuildingSection.jsx";
 import PriceSection from "./components/PriceSection.jsx";
 import { CANDS } from "./data/mockData.js";
-import { normalizeLand, normalizeBuilding, normalizeZone } from "./data/normalize.js";
+import { normalizeLand, normalizeBuilding, normalizeZone, normalizePrice } from "./data/normalize.js";
 import { buildChart } from "./utils/format.js";
-import { fetchLadfrl, fetchLandUse, fetchLandPriceRows, ldCodeFromPnu } from "./api/vworld.js";
+import { fetchLadfrl, fetchLandUse, fetchLandPriceByYears, ldCodeFromPnu } from "./api/vworld.js";
 
 const SECTION_IDS = ["summary", "zone", "land", "bld", "price"];
 
@@ -51,13 +51,22 @@ export default function App() {
     const ldCode = ldCodeFromPnu(id);
     const thisYear = new Date().getFullYear();
     const years = Array.from({ length: 5 }, (_, i) => thisYear - 4 + i);
-    fetchLandPriceRows(ldCode, years)
-      .then((rows) => {
-        const hasAny = rows.some((r) => r.value != null);
-        patch(id, { price: hasAny ? "ok" : "empty", priceChart: hasAny ? buildChart(rows) : null });
+    fetchLandPriceByYears(ldCode, years)
+      .then((yearItems) => {
+        const info = normalizePrice(yearItems);
+        const hasAny = info.rows.some((r) => r.value != null);
+        const latestYearWithData = [...years].reverse().find((y) => (info.breakdownByYear[y] || []).length > 0) ?? years[years.length - 1];
+        patch(id, {
+          price: hasAny ? "ok" : "empty",
+          priceChart: hasAny ? buildChart(info.rows) : null,
+          priceInfo: info,
+          priceYear: latestYearWithData,
+        });
       })
       .catch(() => patch(id, { price: "error" }));
   };
+
+  const selectPriceYear = (id, year) => patch(id, { priceYear: year });
 
   const select = (c, quiet = false) => {
     const id = c.pnu;
@@ -74,6 +83,8 @@ export default function App() {
         zoneInfo: null,
         landInfo: null,
         priceChart: null,
+        priceInfo: null,
+        priceYear: null,
         fetchedAt: timestamp(),
       };
       setTabs((prev) => (prev.some((t) => t.id === id) ? prev : [...prev, tab]));
@@ -265,6 +276,12 @@ export default function App() {
             selShort={sel.jibun.split(" ").slice(-2).join(" ")}
             selCoords={`${sel.lat}, ${sel.lng}`}
             chart={chart}
+            ldCodeNm={tab?.priceInfo?.ldCodeNm}
+            ldCode={tab?.priceInfo?.ldCode}
+            breakdownYears={tab?.priceChart?.priceRows?.map((r) => r.year) || []}
+            breakdown={(tab?.priceInfo?.breakdownByYear || {})[tab?.priceYear]}
+            selectedYear={tab?.priceYear}
+            onSelectYear={(year) => selectPriceYear(activeId, year)}
           />
 
           <div style={{ borderTop: "1px solid #E5E1D8", paddingTop: 18, display: "flex", justifyContent: "space-between", fontSize: 11.5, color: "#A6A19A" }}>

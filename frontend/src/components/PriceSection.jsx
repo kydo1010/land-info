@@ -1,4 +1,17 @@
-export default function PriceSection({ status, selShort, selCoords, chart }) {
+const TAG_COL_STYLE = { display: "grid", gridTemplateColumns: "1fr 1fr 110px 150px" };
+
+export default function PriceSection({
+  status,
+  selShort,
+  selCoords,
+  chart,
+  ldCodeNm,
+  ldCode,
+  breakdownYears,
+  breakdown,
+  selectedYear,
+  onSelectYear,
+}) {
   const loading = status === "loading";
 
   return (
@@ -8,6 +21,28 @@ export default function PriceSection({ status, selShort, selCoords, chart }) {
         <h2 style={{ margin: 0, fontSize: 25, fontWeight: 700, letterSpacing: "-.025em" }}>공시지가 트래커</h2>
         <div style={{ fontSize: 14, color: "#8C877E" }}>국토교통부 · 개별공시지가 (최근 5개년)</div>
       </div>
+
+      {status === "ok" && (
+        <div
+          style={{
+            fontSize: 12.5,
+            color: "#6B665E",
+            background: "#F7F5EF",
+            border: "1px solid #EDEAE2",
+            borderRadius: 3,
+            padding: "10px 14px",
+            marginBottom: 14,
+            lineHeight: 1.6,
+          }}
+        >
+          개별공시지가 API는 <strong>필지 단위 조회가 불가능</strong>해, 아래 수치·표는 이 주소가 속한 법정동{" "}
+          <strong>
+            {ldCodeNm}({ldCode})
+          </strong>{" "}
+          전체의 통계입니다 — 이 필지만의 값이 아닙니다.
+        </div>
+      )}
+
       <div
         style={{
           background: "#FFFFFF",
@@ -134,6 +169,55 @@ export default function PriceSection({ status, selShort, selCoords, chart }) {
                   <span>데이터가 없는 연도는 선을 끊어 표시합니다.</span>
                 </div>
               )}
+
+              <div style={{ marginTop: 26 }}>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
+                  <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em" }}>
+                    {ldCodeNm} 지목·용도지역별 세부 내역
+                  </div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {breakdownYears.map((y) => (
+                      <button
+                        key={y}
+                        onClick={() => onSelectYear(y)}
+                        style={{
+                          border: "1px solid " + (y === selectedYear ? "#171614" : "#E5E1D8"),
+                          background: y === selectedYear ? "#171614" : "#FFFFFF",
+                          color: y === selectedYear ? "#FBFAF7" : "#3D3A34",
+                          borderRadius: 999,
+                          padding: "4px 12px",
+                          fontSize: 12.5,
+                          fontFamily: "inherit",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {y}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {breakdown && breakdown.length > 0 ? (
+                  <div style={{ border: "1px solid #E5E1D8", borderRadius: 3 }}>
+                    <div style={{ ...TAG_COL_STYLE, fontSize: 11.5, color: "#8C877E", padding: "9px 12px", borderBottom: "1px solid #EDEAE2" }}>
+                      <div>지목</div>
+                      <div>용도지역</div>
+                      <div style={{ textAlign: "right" }}>면적</div>
+                      <div style={{ textAlign: "right" }}>공시지가 (원/㎡)</div>
+                    </div>
+                    {breakdown.map((r, i) => (
+                      <div key={i} style={{ ...TAG_COL_STYLE, fontSize: 14, padding: "9px 12px", borderBottom: "1px solid #F3F0E9" }}>
+                        <div>{r.jimok}</div>
+                        <div>{r.use}</div>
+                        <div style={{ textAlign: "right" }}>{r.area}</div>
+                        <div style={{ textAlign: "right" }}>{r.price}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 13, color: "#A6A19A", padding: "14px 2px" }}>{selectedYear}년 데이터가 없습니다.</div>
+                )}
+              </div>
             </div>
           )}
         </div>

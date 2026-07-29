@@ -62,3 +62,25 @@ export function normalizeZone(items) {
     })),
   };
 }
+
+const avgPrice = (items) => (items.length ? Math.round(items.reduce((acc, it) => acc + Number(it.ladPblntfPclnd), 0) / items.length) : null);
+
+// 개별공시지가 API(getIndvdLandPrice) 5개년 원본 응답(api/vworld.js의 fetchLandPriceByYears 결과,
+// [{year, items}])을 화면 표시용으로 변환한다. 필지 단위 조회가 불가능해(8-5 참조) 법정동(ldCode)
+// 단위로 재설계됐다 — rows는 연도별 법정동 평균(buildChart용), breakdownByYear는 연도별 지목·용도지역
+// 조합별 세부 내역이다.
+export function normalizePrice(yearItems) {
+  const withData = yearItems.find((y) => y.items.length > 0);
+  const sample = withData ? withData.items[0] : null;
+  const rows = yearItems.map(({ year, items }) => ({ year, value: avgPrice(items) }));
+  const breakdownByYear = {};
+  yearItems.forEach(({ year, items }) => {
+    breakdownByYear[year] = items.map((it) => ({
+      jimok: it.lndcgrCodeNm,
+      use: it.prposAreaNm,
+      area: fmtArea(it.ladAr),
+      price: it.ladPblntfPclnd ? num(Number(it.ladPblntfPclnd)) : "—",
+    }));
+  });
+  return { ldCode: sample?.ldCode ?? null, ldCodeNm: sample?.ldCodeNm ?? null, rows, breakdownByYear };
+}

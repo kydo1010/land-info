@@ -38,19 +38,18 @@ export async function fetchLandUse(pnu) {
 
 // 개별공시지가 — https://api.vworld.kr/ned/data/getIndvdLandPrice
 // 필지 단위 조회가 불가능함이 확인돼(8-5) 법정동(ldCode) 단위로만 조회한다 — F-04 재설계 참조.
-// 한 해에도 지목×용도지역 조합별로 여러 레코드가 내려오므로, 그 해의 평균값 하나로 접어 반환한다.
-async function fetchLandPriceAvgForYear(ldCode, year) {
+// 한 해에도 지목×용도지역 조합별로 여러 레코드가 내려온다 — 원본 레코드를 그대로 반환하고,
+// 평균·화면 표시는 호출하는 쪽(normalize.js)에서 처리한다.
+async function fetchLandPriceForYear(ldCode, year) {
   const data = await jsonp(`${BASE_URL}/getIndvdLandPrice`, baseParams({ ldCode, stdrYear: String(year), reqLvl: "3", numOfRows: "1000" }));
   const root = data.statelndvdLandPrices || data.response || {};
   if (root.resultCode) throw new Error(`${root.resultCode}: ${root.resultMsg}`);
-  const items = root.field || [];
-  if (!items.length) return null;
-  const sum = items.reduce((acc, it) => acc + Number(it.ladPblntfPclnd), 0);
-  return Math.round(sum / items.length);
+  return root.field || [];
 }
 
-// buildChart(rows)에 바로 넣을 수 있는 [{year, value}] 배열을 만든다 (utils/format.js 참조).
-export async function fetchLandPriceRows(ldCode, years) {
-  const values = await Promise.all(years.map((year) => fetchLandPriceAvgForYear(ldCode, year)));
-  return years.map((year, i) => ({ year, value: values[i] }));
+// 5개년치를 한 번에 받아 [{year, items}] 형태로 반환한다. items는 해당 연도 법정동 전체의
+// 지목×용도지역 조합별 레코드(빈 배열이면 그 해 데이터 없음).
+export async function fetchLandPriceByYears(ldCode, years) {
+  const itemsByYear = await Promise.all(years.map((year) => fetchLandPriceForYear(ldCode, year)));
+  return years.map((year, i) => ({ year, items: itemsByYear[i] }));
 }
