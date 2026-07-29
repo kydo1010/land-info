@@ -1,8 +1,6 @@
 """토지이용계획 API (VWorld getLandUseAttr) — 8-1 참조.
 
-⚠️ 미검증: 8-3 실제 호출 테스트에서 오류 응답 래퍼(`{"landUses": {"resultCode":..,"resultMsg":..}}`)는
-실제로 확인했지만, 이 API도 국가중점데이터 카테고리라 성공 응답은 아직 못 봤다. 아래 성공 응답
-아이템 목록의 정확한 키 경로는 최선의 추정이며, 활용신청 승인 후 재확인이 필요하다.
+8-5 실제 호출 테스트(2026-07-29)로 성공 응답 구조 확인 완료: `{"landUses": {"field": [항목, ...]}}` — 아래 파싱과 일치.
 """
 
 from ..config import get_settings
@@ -26,6 +24,5 @@ async def get_land_use(pnu: str) -> list[LandUseItem]:
     if result_code and result_code != "OK":
         raise vworld_error(service="vworld_land_use", code=result_code, message=root.get("resultMsg", ""))
 
-    # ⚠️ 미검증 구간(위 파일 docstring 참조)
     items = root.get("field") or []
     return [LandUseItem.model_validate(item) for item in items]

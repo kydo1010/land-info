@@ -1,9 +1,7 @@
 """토지·임야정보 API (VWorld ladfrlList) — 8-1 참조.
 
-⚠️ 미검증: 8-3 실제 호출 테스트에서 이 API(국가중점데이터 카테고리)는 계속 INCORRECT_KEY만
-받아서, 성공 응답의 실제 JSON 구조를 한 번도 못 봤다. 아래 파싱은 오류 응답 때 본
-`{"ladfrlVOList": {...}}` 래퍼를 근거로 한 최선의 추정이다 — VWorld에 국가중점데이터
-활용신청이 승인되면 실제 응답으로 반드시 재확인해야 한다(11장 "즉시 조치 필요" 참조).
+8-5 실제 호출 테스트(2026-07-29)로 성공 응답 구조 확인 완료: `{"ladfrlVOList": {"ladfrlVOList": [항목, ...]}}` —
+안쪽 `ladfrlVOList`가 바로 항목 배열이다(`ladfrlVO` 키로 한 번 더 감싸져 있지 않음).
 """
 
 from ..config import get_settings
@@ -27,8 +25,7 @@ async def get_land(pnu: str) -> LadfrlItem | None:
     if error_code:
         raise vworld_error(service="vworld_land", code=error_code, message=root.get("message", ""))
 
-    # ⚠️ 미검증 구간(위 파일 docstring 참조)
-    items = (root.get("ladfrlVOList") or {}).get("ladfrlVO") or []
+    items = root.get("ladfrlVOList") or []
     if not items:
         return None
     return LadfrlItem.model_validate(items[0])

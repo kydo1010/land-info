@@ -7,18 +7,20 @@ from urllib.request import Request, urlopen
 from _common import load_env_key
 
 url = "https://api.vworld.kr/ned/data/getIndvdLandPrice"
-query_params = "?" + urlencode({
+query_params = ".?" + urlencode({
+    "format": "json",  # 응답결과 형식(xml 또는 json)
     "key": load_env_key("VWORLD_API_KEY"),
     "stdrYear": "2025",  # 기준연도(YYYY: 4자리)
     "reqLvl": "3",  # 요청구분(1: 시도단위, 2: 시군구단위, 3: 읍면동리단위)
     "ldCode": "1165010800",  # 법정동코드(reqLvl값이 3일 경우: 2~10자리)
-    "format": "json",  # 응답결과 형식(xml 또는 json)
     "numOfRows": "10",  # 검색건수 (최대 1000)
     "pageNo": "1",  # 페이지 번호
+    "domain": "https://kyungdong.cloud",
 })
 
 request = Request(url + query_params)
 request.get_method = lambda: "GET"
+request.add_header("Referer", "https://kyungdong.cloud")
 
 try:
     response_body = urlopen(request).read()
