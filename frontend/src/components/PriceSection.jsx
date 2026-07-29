@@ -35,11 +35,11 @@ export default function PriceSection({
             lineHeight: 1.6,
           }}
         >
-          개별공시지가 API는 <strong>필지 단위 조회가 불가능</strong>해, 아래 수치·표는 이 주소가 속한 법정동{" "}
+          개별공시지가 API는 <strong>필지 단위 조회가 불가능합니다</strong>. 아래 표는 이 주소가 속한 법정동{" "}
           <strong>
             {ldCodeNm}({ldCode})
           </strong>{" "}
-          전체의 통계입니다 — 이 필지만의 값이 아닙니다.
+          전체의 통계입니다.
         </div>
       )}
 
@@ -83,7 +83,7 @@ export default function PriceSection({
             </div>
           </div>
           <div style={{ fontSize: 11.5, color: "#A6A19A", marginTop: 10, lineHeight: 1.6 }}>
-            좌표는 VWorld Geocoder(주소 문자열 기반) — 지도 위 위치 표시는 목업이며, 실제 지도 라이브러리는 미정(11장 참조)
+            좌표 출처 API는 명세 확보 후 확정 예정 <span>TBD</span>
           </div>
         </div>
 

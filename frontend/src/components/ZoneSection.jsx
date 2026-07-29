@@ -1,5 +1,3 @@
-// VWorld getLandUseAttr 응답의 cnflcAtNm 실제 값(포함/저촉/접함) 기준 — planning.md 8-1의
-// "접합" 표기는 오타였고 실제 응답은 "접함"임을 실제 호출로 확인했다(8-5 참조).
 const TAG_STYLE = {
   저촉: { bg: "#F6E7E0", fg: "#8E3B21" },
   접함: { bg: "#EFEDE5", fg: "#6B665E" },
@@ -18,7 +16,7 @@ export default function ZoneSection({ status, use, rules }) {
       <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 14 }}>
         <div style={{ fontSize: 11, color: "#1F4B43", letterSpacing: ".1em" }}>01</div>
         <h2 style={{ margin: 0, fontSize: 25, fontWeight: 700, letterSpacing: "-.025em" }}>토지이용계획</h2>
-        <div style={{ fontSize: 14, color: "#8C877E" }}>국토교통부 · 토지이용규제정보서비스</div>
+        <div style={{ fontSize: 14, color: "#8C877E" }}>국토교통부 / 토지이용규제정보서비스</div>
       </div>
       <div style={{ background: "#FFFFFF", border: "1px solid #E5E1D8", borderRadius: 3 }}>
         {loading ? (
