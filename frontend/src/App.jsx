@@ -8,8 +8,8 @@ import BuildingSection from "./components/BuildingSection.jsx";
 import PriceSection from "./components/PriceSection.jsx";
 import { normalizeLand, normalizeZone, normalizePrice } from "./data/normalize.js";
 import { buildChart } from "./utils/format.js";
-import { fetchLadfrl, fetchLandUse, fetchLandPriceByYears, ldCodeFromPnu } from "./api/vworld.js";
-import { searchAddress, fetchBuilding, fetchCoordinates } from "./api/backend.js";
+import { fetchLadfrl, fetchLandUse, fetchLandPriceByYears, fetchCoordinates, ldCodeFromPnu } from "./api/vworld.js";
+import { searchAddress, fetchBuilding } from "./api/backend.js";
 
 const SECTION_IDS = ["summary", "zone", "land", "bld", "price"];
 

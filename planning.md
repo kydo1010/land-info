@@ -201,18 +201,18 @@ pills는 콘텐츠를 전환하는 탭이 아니라, 아래 섹션으로 스크�
 
 공공 API 하나당 Client 모듈 하나를 두어, 특정 API 명세가 바뀌어도 해당 모듈만 수정하면 되도록 격리한다.
 
-### 예외: VWorld 국가중점데이터 3종은 브라우저에서 직접 호출 (2026-07-29)
+### 예외: VWorld API 4종(국가중점데이터 3종 + Geocoder)은 브라우저에서 직접 호출 (2026-07-29, 8-7에서 Geocoder 추가)
 
-배포 서버(Hostinger, 말레이시아 IP)에서 백엔드가 VWorld 국가중점데이터 3종(토지·임야정보/개별공시지가/토지이용계획)을 호출하면 `RemoteDisconnected`/`502 Bad Gateway`로 계속 실패했다 — `key=test`처럼 임의 키를 넣어도 동일하게 실패하고 vworld.kr 웹사이트 자체도 이 서버 환경에서 접근이 안 돼, API 키·서비스 설정 문제가 아니라 **이 서버의 아웃바운드 IP가 vworld.kr 쪽에서 지역/게이트웨이 차단당하는 문제**로 보인다.
+배포 서버(Hostinger, 말레이시아 IP)에서 백엔드가 VWorld 국가중점데이터 3종(토지·임야정보/개별공시지가/토지이용계획)을 호출하면 `RemoteDisconnected`/`502 Bad Gateway`로 계속 실패했다 — `key=test`처럼 임의 키를 넣어도 동일하게 실패하고 vworld.kr 웹사이트 자체도 이 서버 환경에서 접근이 안 돼, API 키·서비스 설정 문제가 아니라 **이 서버의 아웃바운드 IP가 vworld.kr 쪽에서 지역/게이트웨이 차단당하는 문제**로 보인다. 처음엔 이 차단이 `ned/data`(국가중점데이터) 경로에 한정된 것으로 추정하고 Geocoder(`req/address`)는 백엔드 경유로 남겨뒀으나, 8-7에서 Geocoder도 동일한 서버 환경에서 똑같이 `RemoteDisconnected`/`502`로 실패하는 것을 확인해 **차단이 특정 경로가 아니라 vworld.kr 도메인 전체에 걸린 것으로 확정**했다.
 
-우회책으로 이 3개 API만 **백엔드를 거치지 않고 프론트엔드(브라우저)가 VWorld를 JSONP로 직접 호출**한다(`frontend/src/api/jsonp.js`, `frontend/src/api/vworld.js`). `<script src>` 태그는 CORS 제한을 받지 않고, VWorld가 `callback` 쿼리 파라미터로 JSONP 응답(`콜백함수({...})`, `Content-Type: application/javascript`)을 지원함을 실제 호출로 확인했다.
+우회책으로 VWorld API 4종 전부 **백엔드를 거치지 않고 프론트엔드(브라우저)가 JSONP로 직접 호출**한다(`frontend/src/api/jsonp.js`, `frontend/src/api/vworld.js`). `<script src>` 태그는 CORS 제한을 받지 않고, VWorld가 `callback` 쿼리 파라미터로 JSONP 응답(`콜백함수({...})`, `Content-Type: application/javascript`)을 지원함을 4개 API 모두 실제 호출로 확인했다. 백엔드의 `clients/geocoder_client.py`·`schemas/coordinates.py`와 `api-sample/geocoder.py`는 삭제하지 않고 남겨뒀다(다른 VWorld client들과 같은 이유 — 네트워크 차단이 나중에 풀리면 다시 쓸 수 있다).
 
-이 예외로 인해 위 "백엔드를 경유하는 이유" 중 이 3개 API에 한해서는 아래처럼 트레이드오프가 발생한다:
+이 예외로 인해 위 "백엔드를 경유하는 이유" 중 VWorld API 4종에 한해서는 아래처럼 트레이드오프가 발생한다:
 
 - **API 인증키가 브라우저에 노출된다** — `VITE_` 접두사 환경변수는 빌드 번들에 그대로 박혀 누구나 볼 수 있다. VWorld 키가 발급 시 등록한 도메인으로만 동작하도록 서버가 검증하기 때문에(아래 참조) 이 정도 노출은 감수하기로 함(Google Maps 클라이언트 키와 유사한 패턴).
-- **CORS는 회피되지만 대신 도메인 제약이 생긴다.** 실제 호출 테스트로 VWorld의 검증 규칙을 확인했다: `domain` 쿼리 파라미터가 키에 등록된 도메인(`https://kyungdong.cloud`)과 일치해야 하고, 요청에 `Referer` 헤더가 실려 있으면 그 값도 등록된 도메인과 일치해야 한다. **`Referer`는 브라우저가 실제 접속 주소를 기준으로 자동으로 붙이는 값이라 프론트 JS로 조작할 수 없다** — 즉 이 3개 API 호출은 실제로 `https://kyungdong.cloud`에 배포된 상태에서만 성공하고, 로컬 개발 서버(`localhost`)에서는 `Referer` 불일치로 계속 실패한다. 로컬 개발 중 이 3개 섹션(토지대장·토지이용계획·공시지가)이 오류로 보이는 건 정상이며, 실제 확인은 배포 도메인에서 한다(2026-07-29 결정).
-- **응답 형태 정규화는 백엔드 대신 프론트(`frontend/src/data/normalize.js`)가 담당**하도록 이 3개 API에 한해 옮겨졌다.
-- 도로명주소(juso.go.kr)·건축물대장(건축HUB)·Geocoder는 이 문제와 무관해 기존대로 백엔드 경유 설계를 유지한다.
+- **CORS는 회피되지만 대신 도메인 제약이 생긴다.** 실제 호출 테스트로 VWorld의 검증 규칙을 확인했다: `domain` 쿼리 파라미터가 키에 등록된 도메인(`https://kyungdong.cloud`)과 일치해야 하고, 요청에 `Referer` 헤더가 실려 있으면 그 값도 등록된 도메인과 일치해야 한다(단, Geocoder는 국가중점데이터 카테고리가 아니라 `domain` 없이도 정상 응답했다 — 8-7 참조. 그래도 일관되게 domain을 실어 보낸다). **`Referer`는 브라우저가 실제 접속 주소를 기준으로 자동으로 붙이는 값이라 프론트 JS로 조작할 수 없다** — 즉 국가중점데이터 3종 호출은 실제로 `https://kyungdong.cloud`에 배포된 상태에서만 성공하고, 로컬 개발 서버(`localhost`)에서는 `Referer` 불일치로 계속 실패한다. 로컬 개발 중 이 3개 섹션(토지대장·토지이용계획·공시지가)이 오류로 보이는 건 정상이며, 실제 확인은 배포 도메인에서 한다(2026-07-29 결정).
+- **응답 형태 정규화는 백엔드 대신 프론트(`frontend/src/data/normalize.js`, Geocoder는 `frontend/src/api/vworld.js`의 `fetchCoordinates()` 자체)가 담당**하도록 VWorld 4종에 한해 옮겨졌다.
+- 도로명주소(juso.go.kr)·건축물대장(건축HUB)은 vworld.kr과 무관한 별도 호스트라 이 문제와 상관없어 기존대로 백엔드 경유 설계를 유지한다.
 
 ---
 
@@ -322,6 +322,14 @@ pills는 콘텐츠를 전환하는 탭이 아니라, 아래 섹션으로 스크�
 - 건축HUB 응답이 이따금 "Error receiving response from backend server"로 실패하는 경우가 있었는데, 재시도하면 정상 응답을 받았다 — data.go.kr 서버 쪽의 일시적 불안정으로 보이며 우리 쪽 코드 문제는 아니다.
 - 실제 검색 결과로 얻은 PNU는 항상 VWorld에 매칭 레코드가 있는 게 아니다(예: 강남파이낸스센터의 실제 파생 PNU `1168010100007370000`은 `ladfrlList`에서 `totalCount: 0`) — 목업 시절엔 4개 후보를 전부 매칭되게 손으로 골라뒀어서 이 "데이터 없음" 케이스가 한 번도 실제로 렌더링된 적이 없었다. `LandSection.jsx`에 `empty` 상태 UI가 아예 없어서 빈 화면으로 보이는 걸 이번에 발견해 추가했다(`BuildingSection.jsx`의 `empty` UI와 동일한 패턴).
 
+### 8-7. Geocoder도 배포 서버에서 차단됨 확인 → JSONP로 이전 (2026-07-29)
+
+8-6에서 백엔드 경유로 붙였던 Geocoder(`req/address`)를 실제 배포 서버 환경에서 `api-sample/geocoder.py`로 호출해보니, 국가중점데이터 3종과 **완전히 동일한 증상**(`RemoteDisconnected`/`502 Bad Gateway`)으로 실패했다. 경로만 다를 뿐(`req/address` vs `ned/data/*`) 실패 양상이 같다는 것은, 차단이 `ned/data` 카테고리 한정이 아니라 **vworld.kr 도메인 전체**에 걸려 있다는 뜻이다 — 7장 "예외" 절의 원인 설명을 이걸로 확정했다.
+
+- `frontend/src/api/vworld.js`에 `fetchCoordinates()`를 추가해 Geocoder도 JSONP로 직접 호출하도록 옮겼다. 실제 호출로 확인: `callback` 파라미터를 지원하고(`콜백함수({...})`, `Content-Type: application/javascript`), 국가중점데이터 카테고리가 아니라서 **`domain` 파라미터 없이도 정상 응답**했다(그래도 일관성을 위해 다른 호출과 동일하게 domain을 실어 보내도록 함).
+- `backend/app/routers/coordinates.py`(9장 `/api/coordinates` 엔드포인트)는 삭제했다. `backend/app/clients/geocoder_client.py`와 `backend/app/schemas/coordinates.py`, `backend/api-sample/geocoder.py`는 다른 VWorld client들과 같은 이유로 남겨뒀다 — 지금은 어떤 라우터도 호출하지 않지만, 네트워크 차단이 나중에 풀리면 그대로 다시 쓸 수 있다.
+- `frontend/src/api/backend.js`에서 `fetchCoordinates()`를 제거했다 — 이제 이 파일은 juso.go.kr(주소 검색)·건축HUB(건축물대장)만 다룬다.
+
 ---
 
 ## 9. 백엔드 API 설계 (초안)
@@ -329,7 +337,7 @@ pills는 콘텐츠를 전환하는 탭이 아니라, 아래 섹션으로 스크�
 > 경로와 응답 형태는 제안이며, 공공 API 명세 확인 후 조정한다.
 > 토지대장·토지이용계획은 `pnu`로, 건축물대장은 `sigunguCd`+`bjdongCd`+`platGbCd`+`bun`+`ji` 5개 값으로 식별한다(8-1 참조) — 식별 방식이 서로 달라 `{필지식별자}`는 표기상 편의이며, 실제로는 백엔드가 도로명주소 API 응답(`admCd`/`mtYn`/`lnbrMnnm`/`lnbrSlno`)에서 두 형태를 모두 파생시켜야 한다. `admCd`의 10자리 분리는 8-3의 실제 호출 테스트로 확인됐다.
 > 공시지가는 필지 단위 조회가 불가능함이 확인돼(8-5 참조) `{필지식별자}`가 아니라 법정동코드 `ldCode`(=`admCd`와 동일한 10자리)만으로 조회한다.
-> 토지대장·공시지가·토지이용계획 3종은 배포 서버의 vworld.kr 아웃바운드 차단 문제로 백엔드를 거치지 않고 **프론트엔드가 VWorld를 JSONP로 직접 호출**하도록 예외 처리됐다(7장 "예외" 참조) — 따라서 아래 표의 `/api/land`, `/api/land-price`, `/api/land-use` 3개 경로는 실제로는 만들지 않는다.
+> 토지대장·공시지가·토지이용계획·지도 좌표(Geocoder) 4종은 배포 서버의 vworld.kr 아웃바운드 차단 문제로 백엔드를 거치지 않고 **프론트엔드가 VWorld를 JSONP로 직접 호출**하도록 예외 처리됐다(7장 "예외", 8-7 참조) — 따라서 아래 표의 `/api/land`, `/api/land-price`, `/api/land-use`, `/api/coordinates` 4개 경로는 실제로는 만들지 않는다.
 
 | 메서드 | 경로 | 설명 |
 | --- | --- | --- |
@@ -338,7 +346,7 @@ pills는 콘텐츠를 전환하는 탭이 아니라, 아래 섹션으로 스크�
 | GET | `/api/building?sigunguCd=&bjdongCd=&platGbCd=&bun=&ji=` | 건축물대장 — **구현 완료(2026-07-29)**, 식별자 5개가 계층적 리소스가 아니라 평평한 값이라 경로 대신 쿼리 파라미터로 확정 |
 | ~~GET~~ | ~~`/api/land-price?ldCode=`~~ | 공시지가 — 프론트가 VWorld 직접 호출로 대체(7장 참조) |
 | ~~GET~~ | ~~`/api/land-use/{필지식별자}`~~ | 토지이용계획 — 프론트가 VWorld 직접 호출로 대체(7장 참조) |
-| GET | `/api/coordinates?address=` | 지도 표시용 좌표 (VWorld Geocoder 경유) — **구현 완료(2026-07-29)** |
+| ~~GET~~ | ~~`/api/coordinates?address=`~~ | 지도 좌표 — 프론트가 VWorld Geocoder 직접 호출(JSONP)로 대체(7장 "예외", 8-7 참조) |
 
 ### 공통 규약
 
@@ -421,7 +429,7 @@ pills는 콘텐츠를 전환하는 탭이 아니라, 아래 섹션으로 스크�
 ### Phase 4 — 차트 · 지도
 
 - F-04 법정동 평균 공시지가 꺾은선 차트 + 연도별 세부 내역 표 (기존 필지 단위 목업 교체) — 완료
-- ~~F-04 좌표 연동~~ → 완료(2026-07-29): `/api/coordinates`(Geocoder) 실제 연동, 지도 라벨에 실좌표 표시 — 8-6 참조
+- ~~F-04 좌표 연동~~ → 완료(2026-07-29): Geocoder 실제 연동, 지도 라벨에 실좌표 표시 — 처음엔 백엔드(`/api/coordinates`)로 붙였다가, Geocoder도 배포 서버에서 vworld.kr 차단에 걸리는 것을 확인해(8-7) 프론트 JSONP(`api/vworld.js`의 `fetchCoordinates()`)로 옮기고 백엔드 라우터는 제거함
 - F-04 지도 UI 자체(좌표를 실제 지도에 핀으로 표시)는 여전히 목업 — 11장 미결정 사항(지도 라이브러리 선정, Leaflet 등) 확정 후 구현
 
 ### Phase 5 — 마감

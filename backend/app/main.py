@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 
 from .config import get_settings
 from .errors import ExternalAPIError, user_message_for
-from .routers import address, building, coordinates
+from .routers import address, building
 from .schemas.envelope import ErrorDetail
 
 settings = get_settings()
@@ -28,4 +28,3 @@ async def external_api_error_handler(request: Request, exc: ExternalAPIError) ->
 
 app.include_router(address.router)
 app.include_router(building.router)
-app.include_router(coordinates.router)

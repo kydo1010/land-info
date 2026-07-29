@@ -30,10 +30,10 @@ uv sync
 ```
 uv run uvicorn app.main:app --reload --port 8000
 ```
-`/api/address/search`, `/api/building`, and `/api/coordinates` are wired up (see Architecture below) —
-`/api/land*` are deliberately *not* implemented here, since the frontend calls VWorld directly instead (see
-the JSONP exception below). Don't add a `/api/land`-style router without first checking whether that's still
-true.
+Only `/api/address/search` and `/api/building` are wired up (see Architecture below) — `/api/land*` and
+`/api/coordinates` are deliberately *not* implemented here, since the frontend calls VWorld directly for all
+four of those instead (see the JSONP exception below). Don't add a router for any VWorld-backed endpoint
+without first checking whether that's still true.
 
 ### `backend/api-sample/`
 Standalone, throwaway scripts (not imported by `app/`) for poking a real external API directly with plain
@@ -52,17 +52,20 @@ directly — never print or copy API key values out of `.env`; add new keys to `
 `frontend/` (React 18 + Vite, plain JS/JSX — no TypeScript, no CSS framework, inline styles) and `backend/`
 (FastAPI) are separate projects. Every report section now hits a real external API — there is no mock data
 left anywhere in this codebase — but *which* layer makes the call differs per section (see the JSONP
-exception below): 토지대장/토지이용계획/공시지가 go straight from the browser to VWorld; 주소 검색/건축물대장
-go through the backend as originally designed. Keep that split in mind before "fixing" an inconsistency.
+exception below): 토지대장/토지이용계획/공시지가/지도 좌표 go straight from the browser to VWorld; 주소 검색/
+건축물대장 go through the backend as originally designed. Keep that split in mind before "fixing" an
+inconsistency.
 
 ### Backend layers (`backend/app/`)
 - `main.py` — the FastAPI app: CORS (`settings.frontend_origin`), a global exception handler that turns any
   `ExternalAPIError` into an `Envelope` error response, and `include_router()` for each router.
 - `routers/` — thin HTTP layer. `address.py` calls `clients/juso_client.py` directly and returns
-  `Envelope[list[AddressCandidate]]`; `coordinates.py` calls `clients/geocoder_client.py` directly and returns
-  `Envelope[Coordinates]` (both are trivial single-call passthroughs, which belong in the router, not a
-  service). `building.py` takes `sigunguCd`/`bjdongCd`/`platGbCd`/`bun`/`ji` as query params (aliased from
-  snake_case, same CamelModel convention as everywhere else) and delegates to `services/building_service.py`.
+  `Envelope[list[AddressCandidate]]` (a trivial single-call passthrough belongs in the router, not a service).
+  `building.py` takes `sigunguCd`/`bjdongCd`/`platGbCd`/`bun`/`ji` as query params (aliased from snake_case,
+  same CamelModel convention as everywhere else) and delegates to `services/building_service.py`. There is no
+  `coordinates.py` router — it existed briefly but was deleted once Geocoder turned out to be blocked from the
+  deployed server same as the other three VWorld APIs (see JSONP exception below); don't re-add it without
+  re-confirming Geocoder actually works from wherever this backend is deployed.
 - `services/building_service.py` — the one place with real orchestration logic: calls `building_client.get_title()`
   then (if a building exists) `get_floors()`, and combines them via `schemas/building.py`'s `to_building_record()`.
   This is the pattern for "service" — multi-client orchestration goes here, single-client passthroughs go
@@ -70,7 +73,10 @@ go through the backend as originally designed. Keep that split in mind before "f
 - `clients/` — one module per external API (`land_client.py`, `land_price_client.py`, `land_use_client.py`,
   `juso_client.py`, `building_client.py`, `geocoder_client.py`), each doing the HTTP call + turning the raw
   response into a Pydantic model. `clients/base.py` has the shared `httpx` `get_json()` helper (timeout +
-  error wrapping). Changing one API's shape should only ever touch its one client module.
+  error wrapping). Changing one API's shape should only ever touch its one client module. Four of these six
+  (`land_client.py`, `land_price_client.py`, `land_use_client.py`, `geocoder_client.py`) have **no router
+  calling them at all** — they're kept as working reference implementations for if/when the VWorld network
+  block gets resolved, not dead code to delete.
 - `schemas/` — Pydantic models. `schemas/common.py`'s `CamelModel` is the base for anything that crosses to
   the frontend: fields are written snake_case in Python but serialize as camelCase, deliberately matching the
   shape `frontend/src/data/normalize.js` produces for the VWorld-direct sections — `schemas/building.py`'s
@@ -93,10 +99,11 @@ go through the backend as originally designed. Keep that split in mind before "f
   tab and are reused by both the initial `select()` and each section's retry button. `candidates` (search
   results) is its own piece of state now, populated by `runSearch()` calling the real backend — there is no
   static candidate list anymore.
-- `api/backend.js` calls the FastAPI backend (`searchAddress()`, `fetchBuilding()`, `fetchCoordinates()`);
-  `api/vworld.js` + `api/jsonp.js` call VWorld directly (see exception below). `data/normalize.js` turns raw
-  VWorld JSON into the view-model each `*Section.jsx` expects — building doesn't need this step since the
-  backend's `BuildingRecord` already comes out in that shape (see `schemas/building.py` note above).
+- `api/backend.js` calls the FastAPI backend (`searchAddress()`, `fetchBuilding()` — only these two); all four
+  VWorld-backed things (`fetchLadfrl()`, `fetchLandUse()`, `fetchLandPriceByYears()`, `fetchCoordinates()`) live
+  in `api/vworld.js` + `api/jsonp.js` instead (see exception below). `data/normalize.js` turns raw VWorld JSON
+  into the view-model each `*Section.jsx` expects — building doesn't need this step since the backend's
+  `BuildingRecord` already comes out in that shape (see `schemas/building.py` note above).
   Coordinates (`tab.coords`, `{lat, lng}`) are only ever used as a text label in `PriceSection.jsx` — there's
   no real map widget yet (see below), so a failed geocode is swallowed silently rather than shown as an error.
 - `components/*Section.jsx` are presentational, one per report section (`zone`/`land`/`bld`/`price`), matched
@@ -105,25 +112,29 @@ go through the backend as originally designed. Keep that split in mind before "f
   outcome, not just a placeholder for "still loading"); `ZoneSection.jsx` currently has no distinct `"empty"`
   branch, which is a known gap, not an oversight to copy elsewhere.
 
-### The VWorld-direct-from-browser exception (important, read before touching land/zone/price)
-Three VWorld "국가중점데이터" APIs — 토지·임야정보 (`ladfrlList`), 개별공시지가 (`getIndvdLandPrice`),
-토지이용계획 (`getLandUseAttr`) — are called **directly from the browser via JSONP**
-(`frontend/src/api/jsonp.js` + `frontend/src/api/vworld.js`), bypassing the backend entirely. This is not the
-general pattern for this app — it's a workaround because the deployed backend's outbound IP gets blocked by
-vworld.kr (see planning.md 7章 "예외" and 8-5). Address search (juso.go.kr) and 건축물대장 (data.go.kr) are a
-different host each and are not known to be blocked, so they go through the backend as originally intended
-(`app/routers/address.py`, `app/routers/building.py`) — don't extend the JSONP pattern to them without a
-confirmed reason. Geocoder (`app/routers/coordinates.py`) is the one exception-to-the-exception to watch: it's
-technically on vworld.kr too (`req/address`, not the blocked `ned/data` path), so it was wired through the
-backend on the assumption that the block is path-specific — that's unverified against the actual deployed
-server (planning.md 8-6). If it turns out vworld.kr is blocked wholesale, this is the next candidate for the
-JSONP treatment.
+### The VWorld-direct-from-browser exception (important, read before touching land/zone/price/coordinates)
+All four VWorld APIs this app uses — 토지·임야정보 (`ladfrlList`), 개별공시지가 (`getIndvdLandPrice`),
+토지이용계획 (`getLandUseAttr`), and Geocoder (`req/address`, used for map coordinates) — are called **directly
+from the browser via JSONP** (`frontend/src/api/jsonp.js` + `frontend/src/api/vworld.js`), bypassing the
+backend entirely. This is not the general pattern for this app — it's a workaround because the deployed
+backend's outbound IP gets blocked by vworld.kr. Geocoder was originally wired through the backend
+(`app/routers/coordinates.py`) on the theory that the block was specific to the `ned/data` (국가중점데이터)
+path; that router was deleted once a live call from the same deployed-server environment reproduced the exact
+same `RemoteDisconnected`/`502` failure on Geocoder's `req/address` path, confirming the block is host-wide,
+not path-specific (planning.md 8-7). **If you're tempted to route any vworld.kr call through the backend,
+assume it will be blocked too** — the presumption has flipped from "innocent until proven blocked" to
+"blocked until proven otherwise" for this host. Address search (juso.go.kr) and 건축물대장 (data.go.kr) are
+different hosts entirely and are not known to be blocked, so they go through the backend as originally
+intended (`app/routers/address.py`, `app/routers/building.py`).
 
-Quirks specific to this JSONP path, all reproduced empirically (planning.md 8-5):
+Quirks specific to this JSONP path, all reproduced empirically (planning.md 8-5, 8-7):
 - VWorld's `domain` query param must match **exactly** the domain string registered for that API key — no
   scheme, no port (e.g. `localhost`, not `http://localhost:5173`). If a `Referer` header happens to be present
   on the request, it must also match; a real browser always sends one automatically and it can't be spoofed
   from page JS, so this API key only actually works when the page is served from its registered domain.
+  Geocoder is the one exception: it's not a 국가중점데이터-category endpoint, so it answered fine with no
+  `domain` param at all in testing — `fetchCoordinates()` still sends one anyway, for consistency with the
+  other three calls, not because it's required.
 - A successful response is wrapped as `callbackName({...})` with `Content-Type: application/javascript`. An
   *unsuccessful* one (e.g. `INCORRECT_KEY`) comes back as bare, unwrapped JSON despite the same
   `Content-Type` — Chrome's ORB (Cross-Origin Read Blocking) then blocks the script load outright, so failures

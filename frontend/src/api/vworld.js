@@ -1,6 +1,8 @@
-// VWorld 국가중점데이터 3종(토지·임야정보/개별공시지가/토지이용계획)을 브라우저에서 직접 호출한다.
-// 백엔드 서버를 거치면 서버의 아웃바운드 IP가 vworld.kr 쪽에서 차단당하는 문제가 있어(2026-07-29),
-// 우회책으로 프론트엔드가 VWorld를 JSONP로 바로 호출한다 — planning.md 8-5 참조.
+// VWorld API를 브라우저에서 직접 호출한다 — 국가중점데이터 3종(토지·임야정보/개별공시지가/토지이용계획)에
+// 더해 Geocoder도 포함한다. 백엔드 서버를 거치면 서버의 아웃바운드 IP가 vworld.kr 쪽에서 차단당하는
+// 문제가 있고(2026-07-29), 이 차단은 특정 API 경로가 아니라 vworld.kr 도메인 전체에 걸려 있음이
+// Geocoder(`req/address`, 국가중점데이터 카테고리 아님)에서도 동일하게 재현되어 확인됐다(8-6 참조) —
+// 우회책으로 프론트엔드가 VWorld 전체를 JSONP로 바로 호출한다.
 //
 // 주의: VITE_ 접두사가 붙은 값은 빌드 시 번들에 그대로 박혀 브라우저에서 누구나 볼 수 있다.
 // VWorld 키는 발급 시 등록한 도메인(VITE_VWORLD_DOMAIN)의 Referer로만 동작하도록 서버가 검증하므로
@@ -8,6 +10,7 @@
 import { jsonp } from "./jsonp.js";
 
 const BASE_URL = "https://api.vworld.kr/ned/data";
+const GEOCODER_URL = "https://api.vworld.kr/req/address";
 const KEY = import.meta.env.VITE_VWORLD_API_KEY;
 const DOMAIN = import.meta.env.VITE_VWORLD_DOMAIN;
 
@@ -52,4 +55,27 @@ async function fetchLandPriceForYear(ldCode, year) {
 export async function fetchLandPriceByYears(ldCode, years) {
   const itemsByYear = await Promise.all(years.map((year) => fetchLandPriceForYear(ldCode, year)));
   return years.map((year, i) => ({ year, items: itemsByYear[i] }));
+}
+
+// Geocoder(주소 → 좌표) — https://api.vworld.kr/req/address
+// F-01에서 선택한 주소 문자열을 그대로 넣는다(PNU 불필요, 8-1 참조). 국가중점데이터 카테고리가
+// 아니라 domain 없이도 정상 응답했지만(8-6 확인), 다른 VWorld 호출과 동일하게 domain을 실어 보낸다.
+export async function fetchCoordinates(address, addressType = "road") {
+  const data = await jsonp(GEOCODER_URL, {
+    service: "address",
+    request: "getCoord",
+    version: "2.0",
+    crs: "epsg:4326",
+    address,
+    type: addressType,
+    key: KEY,
+    domain: DOMAIN,
+  });
+  const response = data.response || {};
+  if (response.status !== "OK") {
+    const error = response.error || {};
+    throw new Error(`${error.code || response.status}: ${error.text || ""}`);
+  }
+  const point = response.result.point;
+  return { lat: point.y, lng: point.x };
 }
