@@ -267,19 +267,7 @@ export default function App() {
           <SummarySection items={summaryItems} />
           <ZoneSection status={st.zone} use={zone ? zone.use : ""} rules={zone ? zone.rules : []} />
           <LandSection status={st.land} rows={landRows} onRetry={() => retry("land")} />
-          <BuildingSection
-            status={st.bld}
-            struct={building?.struct}
-            purpose={building?.purpose}
-            siteArea={building?.siteArea}
-            buildArea={building?.buildArea}
-            bcr={building?.bcr}
-            far={building?.far}
-            approved={building?.approved}
-            floorSummary={building?.floorSummary}
-            floors={building?.floors || []}
-            onRetry={() => retry("bld")}
-          />
+          <BuildingSection status={st.bld} building={building} onRetry={() => retry("bld")} />
           <PriceSection
             status={st.price}
             selShort={sel.jibun.split(" ").slice(-2).join(" ")}

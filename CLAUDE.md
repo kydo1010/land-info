@@ -104,8 +104,9 @@ inconsistency.
   in `api/vworld.js` + `api/jsonp.js` instead (see exception below). `data/normalize.js` turns raw VWorld JSON
   into the view-model each `*Section.jsx` expects — building doesn't need this step since the backend's
   `BuildingRecord` already comes out in that shape (see `schemas/building.py` note above).
-  Coordinates (`tab.coords`, `{lat, lng}`) are only ever used as a text label in `PriceSection.jsx` — there's
-  no real map widget yet (see below), so a failed geocode is swallowed silently rather than shown as an error.
+  Coordinates (`tab.coords`, `{lat, lng}`) feed `components/ParcelMap.jsx` (Leaflet/`react-leaflet`, OpenStreetMap
+  tiles) in `PriceSection.jsx`; a failed geocode is swallowed silently (map falls back to a "확인 중" placeholder)
+  rather than shown as an error, since it's a secondary display, not one of the 4 report sections.
 - `components/*Section.jsx` are presentational, one per report section (`zone`/`land`/`bld`/`price`), matched
   to the pill anchor-nav ids in `App.jsx`'s `SECTION_IDS`. Each one branches on `status` — make sure any new
   status value handles `"empty"` explicitly (a section with no error and no data is a legitimate real-world

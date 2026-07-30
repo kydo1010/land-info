@@ -388,13 +388,7 @@ VWorld API 목록([dtna_apiSvcFc_s001.do](https://www.vworld.kr/dtna/dtna_apiSvc
 
 ## 11. 미결정 사항
 
-기획을 확정하려면 아래 항목에 대한 결정 또는 확인이 필요하다.
-
-| # | 항목 | 성격 | 비고 |
-| --- | --- | --- | --- |
-| 1 | 도로명주소 · 지번주소 입력 모두 지원 여부 | 도로명 주소만 지원 | 검색 API 지원 범위에 종속 |
-| 2 | 차트 라이브러리 선정 | Recharts | |
-| 3 | 지도 표시 라이브러리 선정 | Leaflet** (`react-leaflet`) | 좌표 획득(Geocoder)은 확인됨 — 지도를 실제로 그릴 라이브러리/위젯만 미정 |
+없음 — 마지막까지 남아있던 3개 항목(주소 입력 범위·차트 라이브러리·지도 라이브러리)을 2026-07-30에 전부 결정함. 아래 "결정된 사항" 표 참조.
 
 ### 결정된 사항 (참고)
 
@@ -407,6 +401,9 @@ VWorld API 목록([dtna_apiSvcFc_s001.do](https://www.vworld.kr/dtna/dtna_apiSvc
 | 배포 환경 | 로컬 |
 | VWorld 국가중점데이터 3종 `INCORRECT_KEY` 원인 | 활용신청 미승인이 아니라 **도메인 검증 문제**였음 — 요청에 키 발급 시 등록한 도메인과 일치하는 `domain` 쿼리 파라미터·`Referer` 헤더를 실어야 정상 응답 — 8-5 실제 호출 테스트로 확인(2026-07-29) |
 | F-04 공시지가 트래커 설계 | `getIndvdLandPrice`(ldCode 기준)는 필지 단위 조회 불가능(8-5) — 한때 법정동 단위 통계로 재설계했었으나, 같은 날 필지 단위가 되는 `getIndvdLandPriceAttr`를 찾아 교체해 **원래 기획대로 필지(pnu) 단위 5개년 차트로 최종 확정**(2026-07-29, 8-8 참조). 상세는 4장 F-04 참조 |
+| 도로명주소·지번주소 입력 범위 | **도로명 주소만 지원**하는 것으로 확정(2026-07-30) — juso.go.kr 검색 API가 이미 지번주소도 결과에 함께 반환하므로(`jibunAddr` 필드) 검색 자체는 지번으로도 걸리지만, 입력창에 지번만 쳤을 때의 자동완성/보정 로직은 추가하지 않는다 |
+| 차트 라이브러리 | **Recharts 등 별도 라이브러리는 도입하지 않고, 기존 수작업 SVG(`utils/format.js`의 `buildChart()`)를 그대로 유지**하기로 확정(2026-07-30) — 단일 시계열 5개 점 + 결측 구간 끊기만 필요한 단순한 차트라, 이미 정확히 그 요구사항만 구현한 코드가 있는 상태에서 라이브러리(D3 기반이라 번들 크기도 늘어남)를 새로 넣는 게 더 비효율적이라고 판단함. 이후 차트 요구사항이 복잡해지면(다중 시계열, 확대/축소, 툴팁 등) 그때 재검토 |
+| 지도 표시 라이브러리 | **Leaflet(`react-leaflet`) 도입 확정**(2026-07-30) — `PriceSection.jsx`의 목업 지도를 실제 Leaflet 지도(OpenStreetMap 타일)로 교체, 좌표(Geocoder)에 마커 표시. 구현 내용은 12장 Phase 4 참조 |
 
 
 ---
@@ -448,7 +445,7 @@ VWorld API 목록([dtna_apiSvcFc_s001.do](https://www.vworld.kr/dtna/dtna_apiSvc
 
 - F-04 필지 단위 개별공시지가 5개년 꺾은선 차트 + 연도별 표 (`getIndvdLandPriceAttr`, 8-8 참조) — 완료
 - ~~F-04 좌표 연동~~ → 완료(2026-07-29): Geocoder 실제 연동, 지도 라벨에 실좌표 표시 — 처음엔 백엔드(`/api/coordinates`)로 붙였다가, Geocoder도 배포 서버에서 vworld.kr 차단에 걸리는 것을 확인해(8-7) 프론트 JSONP(`api/vworld.js`의 `fetchCoordinates()`)로 옮기고 백엔드 라우터는 제거함
-- F-04 지도 UI 자체(좌표를 실제 지도에 핀으로 표시)는 여전히 목업 — 11장 미결정 사항(지도 라이브러리 선정, Leaflet 등) 확정 후 구현
+- ~~F-04 지도 UI 자체(좌표를 실제 지도에 핀으로 표시)~~ → 완료(2026-07-30): Leaflet(`react-leaflet`) 도입 확정(11장 참조), `frontend/src/components/ParcelMap.jsx` 신규 작성해 `PriceSection.jsx`의 목업 지도를 OpenStreetMap 타일 기반 실제 지도로 교체, Geocoder 좌표에 마커 표시
 
 ### Phase 5 — 마감
 
