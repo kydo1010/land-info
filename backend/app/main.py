@@ -1,6 +1,9 @@
+from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from .config import get_settings
 from .errors import ExternalAPIError, user_message_for
@@ -30,3 +33,8 @@ async def external_api_error_handler(request: Request, exc: ExternalAPIError) ->
 
 app.include_router(address.router)
 app.include_router(building.router)
+
+# 빌드된 프론트엔드 정적 파일을 API 라우터와 같은 포트에서 서빙한다 (별도 포트 개방 없이 배포하기 위함).
+# "/api/*" 라우터가 먼저 등록돼 있어 이 catch-all 마운트보다 우선 매칭된다.
+FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")
