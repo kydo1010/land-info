@@ -10,7 +10,7 @@ function InfoRow({ label, value }) {
 function InfoGroup({ title, rows }) {
   return (
     <div style={{ padding: "22px 26px", borderBottom: "1px solid #EDEAE2" }}>
-      <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em", marginBottom: 10 }}>{title}</div>
+      <div style={{ marginBottom: 10 }}>{title}</div>
       <div>
         {rows.map(([label, value]) => (
           <InfoRow key={label} label={label} value={value} />
@@ -88,7 +88,7 @@ export default function BuildingSection({ status, building, onRetry }) {
             </div>
 
             <InfoGroup
-              title="대지 및 건물 기본 정보"
+              title=<h3 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: "-.02em", color: "#777777" }}>대지 및 건물 기본 정보</h3>
               rows={[
                 ["고유번호", b.uniqueNo],
                 ["건물ID", b.buildingId || "-"],
@@ -101,7 +101,7 @@ export default function BuildingSection({ status, building, onRetry }) {
             />
 
             <InfoGroup
-              title="면적 및 구조 정보"
+              title=<h3 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: "-.02em", color: "#777777" }}>면적 및 구조 정보</h3>
               rows={[
                 ["용적률 산정용 연면적", b.vlRatArea],
                 ["지역", b.zoningRegion],
@@ -115,52 +115,62 @@ export default function BuildingSection({ status, building, onRetry }) {
 
             <div style={{ padding: "22px 26px 26px", borderBottom: "1px solid #EDEAE2" }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 14 }}>
-                <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em" }}>사용승인일</div>
-                <div style={{ fontSize: 16, fontWeight: 600 }}>{b.approved}</div>
+                <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: "-.02em", color: "#777777" }}>사용승인일</h3>
+                <div style={{ fontSize: 16 }}>{b.approved}</div>
               </div>
-              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
-                <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em" }}>층별 개요</div>
-                <div style={{ fontSize: 11.5, color: "#A6A19A" }}>{b.floorSummary}</div>
-              </div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "70px 100px 1fr 130px 120px",
-                  fontSize: 11.5,
-                  color: "#8C877E",
-                  padding: "0 2px 9px",
-                  borderBottom: "1px solid #E5E1D8",
-                }}
-              >
-                <div>구분</div>
-                <div>층</div>
-                <div>용도</div>
-                <div>구조</div>
-                <div style={{ textAlign: "right" }}>면적 (㎡)</div>
-              </div>
-              {(b.floors || []).map((f, i) => (
+              <details className="floor-details">
+                <summary
+                  style={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: 10,
+                    marginBottom: 12,
+                    cursor: "pointer",
+                  }}
+                >
+                  <h3 className="floor-label" style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: "-.02em", color: "#777777" }}>층별 개요</h3>
+                  <div style={{ fontSize: 16, color: "#A6A19A" }}>{b.floorSummary}</div>
+                </summary>
                 <div
-                  key={i}
                   style={{
                     display: "grid",
                     gridTemplateColumns: "70px 100px 1fr 130px 120px",
-                    fontSize: 15.5,
-                    padding: "11px 2px",
-                    borderBottom: "1px solid #F3F0E9",
-                    alignItems: "center",
+                    fontSize: 11.5,
+                    color: "#8C877E",
+                    padding: "0 2px 9px",
+                    borderBottom: "1px solid #E5E1D8",
                   }}
                 >
-                  <div style={{ color: "#6B665E", fontSize: 14 }}>{f.category}</div>
-                  <div style={{ color: "#3D3A34" }}>{f.floor}</div>
-                  <div style={{ letterSpacing: "-.01em" }}>{f.purpose}</div>
-                  <div style={{ color: "#6B665E", fontSize: 14.5 }}>{f.struct}</div>
-                  <div style={{ textAlign: "right" }}>{f.area}</div>
+                  <div>구분</div>
+                  <div>층</div>
+                  <div>용도</div>
+                  <div>구조</div>
+                  <div style={{ textAlign: "right" }}>면적 (㎡)</div>
                 </div>
-              ))}
+                {(b.floors || []).map((f, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "70px 100px 1fr 130px 120px",
+                      fontSize: 15.5,
+                      padding: "11px 2px",
+                      borderBottom: "1px solid #F3F0E9",
+                      alignItems: "center",
+                    }}
+                  >
+                    <div style={{ color: "#6B665E", fontSize: 14 }}>{f.category}</div>
+                    <div style={{ color: "#3D3A34" }}>{f.floor}</div>
+                    <div style={{ letterSpacing: "-.01em" }}>{f.purpose}</div>
+                    <div style={{ color: "#6B665E", fontSize: 14.5 }}>{f.struct}</div>
+                    <div style={{ textAlign: "right" }}>{f.area}</div>
+                  </div>
+                ))}
+              </details>
             </div>
 
             <InfoGroup
-              title="승강기 및 인허가 시기"
+              title=<h3 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: "-.02em", color: "#777777" }}>승강기 및 인허가 시기</h3>
               rows={[
                 ["승강기(승용)", b.elevatorRide],
                 ["승강기(비상용)", b.elevatorEmergency],
@@ -172,7 +182,7 @@ export default function BuildingSection({ status, building, onRetry }) {
 
             {b.sewage && (
               <InfoGroup
-                title="하수처리시설"
+                title=<h3 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: "-.02em", color: "#777777" }}>하수처리시설</h3>
                 rows={[
                   ["형식", b.sewage.type],
                   ["용량", b.sewage.capacity],
@@ -182,7 +192,7 @@ export default function BuildingSection({ status, building, onRetry }) {
 
             {b.parking && (
               <div style={{ padding: "22px 26px", borderBottom: "1px solid #EDEAE2" }}>
-                <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em", marginBottom: 10 }}>주차장 현황</div>
+                <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: "-.02em", color: "#777777" }}>주차장 현황</h3>
                 <div style={{ display: "grid", gridTemplateColumns: "100px 1fr 1fr", fontSize: 11.5, color: "#8C877E", padding: "0 2px 9px", borderBottom: "1px solid #E5E1D8" }}>
                   <div />
                   <div>옥내</div>
@@ -210,11 +220,14 @@ export default function BuildingSection({ status, building, onRetry }) {
             )}
 
             {b.certifications && b.certifications.length > 0 && (
-              <InfoGroup title="건축물 인증 현황" rows={b.certifications.map((c) => [c.name, c.grade])} />
+              <InfoGroup
+                title=<h3 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: "-.02em", color: "#777777" }}>건축물 인증 현황</h3>
+                rows={b.certifications.map((c) => [c.name, c.grade])}
+              />
             )}
 
             <InfoGroup
-              title="건축물 구조 및 관리 현황"
+              title=<h3 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: "-.02em", color: "#777777" }}>건축물 구조 및 관리 현황</h3>
               rows={[
                 ["내진설계 적용 여부", b.seismicApplied],
                 ["내진능력", b.seismicCapacity],
