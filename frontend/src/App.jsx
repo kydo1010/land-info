@@ -283,7 +283,7 @@ export default function App() {
           <PriceSection
             status={st.price}
             selShort={sel.jibun.split(" ").slice(-2).join(" ")}
-            selCoords={tab?.coords ? `${tab.coords.lat}, ${tab.coords.lng}` : "—"}
+            coords={tab?.coords}
             chart={chart}
             onRetry={() => retry("price")}
           />

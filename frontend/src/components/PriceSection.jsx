@@ -1,4 +1,6 @@
-export default function PriceSection({ status, selShort, selCoords, chart, onRetry }) {
+import ParcelMap from "./ParcelMap.jsx";
+
+export default function PriceSection({ status, selShort, coords, chart, onRetry }) {
   const loading = status === "loading";
   const empty = status === "empty";
   const error = status === "error";
@@ -22,36 +24,27 @@ export default function PriceSection({ status, selShort, selCoords, chart, onRet
       >
         <div style={{ borderRight: "1px solid #EDEAE2", padding: 20 }}>
           <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em", marginBottom: 12 }}>위치</div>
-          <div
-            style={{
-              position: "relative",
-              height: 300,
-              border: "1px solid #E5E1D8",
-              backgroundColor: "#F1EFE8",
-              backgroundImage:
-                "linear-gradient(#E4E0D6 1px, transparent 1px), linear-gradient(90deg, #E4E0D6 1px, transparent 1px), linear-gradient(#EAE6DC 1px, transparent 1px), linear-gradient(90deg, #EAE6DC 1px, transparent 1px)",
-              backgroundSize: "96px 96px, 96px 96px, 24px 24px, 24px 24px",
-              overflow: "hidden",
-            }}
-          >
-            <div style={{ position: "absolute", left: 0, right: 0, top: 116, height: 26, background: "#FFFFFF", borderTop: "1px solid #DED9CE", borderBottom: "1px solid #DED9CE" }} />
-            <div style={{ position: "absolute", top: 0, bottom: 0, left: 196, width: 18, background: "#FFFFFF", borderLeft: "1px solid #DED9CE", borderRight: "1px solid #DED9CE" }} />
-            <div style={{ position: "absolute", left: 130, top: 148, width: 58, height: 46, background: "#DCD6C9", border: "1px solid #CFC8B9" }} />
-            <div style={{ position: "absolute", left: 232, top: 62, width: 44, height: 40, background: "#DCD6C9", border: "1px solid #CFC8B9" }} />
-            <div style={{ position: "absolute", left: 150, top: 78, width: 34, height: 34, background: "#1F4B43", opacity: 0.1 }} />
-            <div style={{ position: "absolute", left: 158, top: 82, display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <div style={{ background: "#171614", color: "#FBFAF7", fontSize: 11, padding: "4px 8px", borderRadius: 2, whiteSpace: "nowrap" }}>
-                {selShort}
+          <div style={{ height: 300, border: "1px solid #E5E1D8", overflow: "hidden" }}>
+            {coords ? (
+              <ParcelMap lat={coords.lat} lng={coords.lng} label={selShort} />
+            ) : (
+              <div
+                style={{
+                  height: "100%",
+                  backgroundColor: "#F1EFE8",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 13,
+                  color: "#A6A19A",
+                }}
+              >
+                좌표를 확인하는 중입니다…
               </div>
-              <div style={{ width: 1, height: 14, background: "#171614" }} />
-              <div style={{ width: 9, height: 9, borderRadius: 999, background: "#171614", border: "2px solid #FBFAF7" }} />
-            </div>
-            <div style={{ position: "absolute", right: 8, bottom: 8, fontSize: 10, color: "#A19B90", background: "rgba(250,249,246,.8)", padding: "3px 6px" }}>
-              {selCoords}
-            </div>
+            )}
           </div>
           <div style={{ fontSize: 11.5, color: "#A6A19A", marginTop: 10, lineHeight: 1.6 }}>
-            좌표 출처 API는 명세 확보 후 확정 예정 <span>TBD</span>
+            좌표는 VWorld Geocoder(주소 문자열 기반), 지도는 OpenStreetMap(Leaflet)
           </div>
         </div>
 
