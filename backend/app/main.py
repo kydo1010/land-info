@@ -13,7 +13,9 @@ app = FastAPI(title="land-info-backend")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_origin],
+    # 배포 환경이 로컬로 확정돼 있어(planning.md 11장), `npm run dev`(5173)와
+    # `npm run build` + `npm run preview`(기본 4173) 둘 다 로컬 프론트 출처로 허용한다.
+    allow_origins=[settings.frontend_origin, "http://localhost:4173"],
     allow_methods=["GET"],
     allow_headers=["*"],
 )
