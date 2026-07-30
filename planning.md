@@ -24,13 +24,15 @@
 
 ### 제외
 
-| 항목 | 사유 |
-| --- | --- |
-| 최근 조회 이력 | 범위에서 제외 |
-| 즐겨찾기 · 서버 저장 이력 | 로그인 미도입에 따라 제외 |
+
+| 항목                            | 사유                              |
+| ----------------------------- | ------------------------------- |
+| 최근 조회 이력                      | 범위에서 제외                         |
+| 즐겨찾기 · 서버 저장 이력               | 로그인 미도입에 따라 제외                  |
 | 필지 검색·탐색용 지도(지도를 클릭해 필지 찾기 등) | 요구사항에 없음 — F-04의 위치 표시용 지도와는 별개 |
-| 출력 · 다운로드(PDF 등) | 요구사항에 없음 |
-| 응답 캐싱(Redis 등) | 범위에서 제외 — 매 조회마다 공공 API 직접 호출 |
+| 출력 · 다운로드(PDF 등)              | 요구사항에 없음                        |
+| 응답 캐싱(Redis 등)                | 범위에서 제외 — 매 조회마다 공공 API 직접 호출   |
+
 
 ---
 
@@ -145,12 +147,14 @@ pills는 콘텐츠를 전환하는 탭이 아니라, 아래 섹션으로 스크�
 
 각 섹션은 아래 4가지 상태를 독립적으로 가진다. 한 섹션의 오류/데이터 없음이 다른 섹션에 영향을 주지 않는다.
 
-| 상태 | 표시 |
-| --- | --- |
-| 로딩 | 스켈레톤 |
-| 정상 | 항목별 데이터 |
+
+| 상태     | 표시                       |
+| ------ | ------------------------ |
+| 로딩     | 스켈레톤                     |
+| 정상     | 항목별 데이터                  |
 | 데이터 없음 | 안내 문구 (예: 해당 필지에 건축물 없음) |
-| 오류 | 오류 안내 + 재시도 버튼 |
+| 오류     | 오류 안내 + 재시도 버튼           |
+
 
 ### 공시지가 트래커 섹션 레이아웃
 
@@ -162,14 +166,16 @@ pills는 콘텐츠를 전환하는 탭이 아니라, 아래 섹션으로 스크�
 
 ## 6. 기술 스택
 
-| 구분 | 기술 |
-| --- | --- |
-| 프론트엔드 | React + Vite |
-| 백엔드 | FastAPI (Python) |
-| 캐시 | 없음 |
-| 차트 | Recharts |
-| 지도 | Leaflet `react-leaflet` |
-| 영속 DB | 없음 |
+
+| 구분    | 기술                      |
+| ----- | ----------------------- |
+| 프론트엔드 | React + Vite            |
+| 백엔드   | FastAPI (Python)        |
+| 캐시    | 없음                      |
+| 차트    | Recharts                |
+| 지도    | Leaflet `react-leaflet` |
+| 영속 DB | 없음                      |
+
 
 ---
 
@@ -192,12 +198,14 @@ pills는 콘텐츠를 전환하는 탭이 아니라, 아래 섹션으로 스크�
 
 ### 백엔드 레이어 구성
 
-| 레이어 | 역할 |
-| --- | --- |
-| Router | 자체 REST 엔드포인트 정의, 요청 검증 |
-| Service | 조회 흐름 조합 |
-| Client | 공공 API별 어댑터 (호출 + 응답 파싱) |
-| Schema | 응답 모델 (Pydantic) |
+
+| 레이어     | 역할                       |
+| ------- | ------------------------ |
+| Router  | 자체 REST 엔드포인트 정의, 요청 검증  |
+| Service | 조회 흐름 조합                 |
+| Client  | 공공 API별 어댑터 (호출 + 응답 파싱) |
+| Schema  | 응답 모델 (Pydantic)         |
+
 
 공공 API 하나당 Client 모듈 하나를 두어, 특정 API 명세가 바뀌어도 해당 모듈만 수정하면 되도록 격리한다.
 
@@ -210,7 +218,7 @@ pills는 콘텐츠를 전환하는 탭이 아니라, 아래 섹션으로 스크�
 이 예외로 인해 위 "백엔드를 경유하는 이유" 중 VWorld API 4종에 한해서는 아래처럼 트레이드오프가 발생한다:
 
 - **API 인증키가 브라우저에 노출된다** — `VITE_` 접두사 환경변수는 빌드 번들에 그대로 박혀 누구나 볼 수 있다. VWorld 키가 발급 시 등록한 도메인으로만 동작하도록 서버가 검증하기 때문에(아래 참조) 이 정도 노출은 감수하기로 함(Google Maps 클라이언트 키와 유사한 패턴).
-- **CORS는 회피되지만 대신 도메인 제약이 생긴다.** 실제 호출 테스트로 VWorld의 검증 규칙을 확인했다: `domain` 쿼리 파라미터가 키에 등록된 도메인(`https://kyungdong.cloud`)과 일치해야 하고, 요청에 `Referer` 헤더가 실려 있으면 그 값도 등록된 도메인과 일치해야 한다(단, Geocoder는 국가중점데이터 카테고리가 아니라 `domain` 없이도 정상 응답했다 — 8-7 참조. 그래도 일관되게 domain을 실어 보낸다). **`Referer`는 브라우저가 실제 접속 주소를 기준으로 자동으로 붙이는 값이라 프론트 JS로 조작할 수 없다** — 즉 국가중점데이터 3종 호출은 실제로 `https://kyungdong.cloud`에 배포된 상태에서만 성공하고, 로컬 개발 서버(`localhost`)에서는 `Referer` 불일치로 계속 실패한다. 로컬 개발 중 이 3개 섹션(토지대장·토지이용계획·공시지가)이 오류로 보이는 건 정상이며, 실제 확인은 배포 도메인에서 한다(2026-07-29 결정).
+- **CORS는 회피되지만 대신 도메인 제약이 생긴다.** 실제 호출 테스트로 VWorld의 검증 규칙을 확인했다: `domain` 쿼리 파라미터가 키에 등록된 도메인(`https://kyungdong.cloud`)과 일치해야 하고, 요청에 `Referer` 헤더가 실려 있으면 그 값도 등록된 도메인과 일치해야 한다(단, Geocoder는 국가중점데이터 카테고리가 아니라 `domain` 없이도 정상 응답했다 — 8-7 참조. 그래도 일관되게 domain을 실어 보낸다). `**Referer`는 브라우저가 실제 접속 주소를 기준으로 자동으로 붙이는 값이라 프론트 JS로 조작할 수 없다** — 즉 국가중점데이터 3종 호출은 실제로 `https://kyungdong.cloud`에 배포된 상태에서만 성공하고, 로컬 개발 서버(`localhost`)에서는 `Referer` 불일치로 계속 실패한다. 로컬 개발 중 이 3개 섹션(토지대장·토지이용계획·공시지가)이 오류로 보이는 건 정상이며, 실제 확인은 배포 도메인에서 한다(2026-07-29 결정).
 - **응답 형태 정규화는 백엔드 대신 프론트(`frontend/src/data/normalize.js`, Geocoder는 `frontend/src/api/vworld.js`의 `fetchCoordinates()` 자체)가 담당**하도록 VWorld 4종에 한해 옮겨졌다.
 - 도로명주소(juso.go.kr)·건축물대장(건축HUB)은 vworld.kr과 무관한 별도 호스트라 이 문제와 상관없어 기존대로 백엔드 경유 설계를 유지한다.
 
@@ -220,37 +228,43 @@ pills는 콘텐츠를 전환하는 탭이 아니라, 아래 섹션으로 스크�
 
 > 아래는 각 API 문서 페이지를 Chrome DevTools로 직접 렌더링해 확인한 내용이다(2026-07-27 기준, 실제 발급키로 호출 테스트는 아직 안 한 상태).
 
-| 기능 | 사용 API | 확인 상태 |
-| --- | --- | --- |
-| F-01 주소 검색 | 도로명주소 API (juso.go.kr) | ✅ 확인 |
-| F-02 토지대장 | 토지·임야정보 API (VWorld) | ✅ 확인 |
-| F-03 건축물대장 | 건축물대장정보 API (data.go.kr, 건축HUB) | ✅ 확인 |
-| F-04 공시지가 | 개별공시지가 API (VWorld) | ✅ 확인 (일부) |
-| F-05 토지이용계획 | 토지이용계획 API (VWorld, `getLandUseAttr`) | ⚠️ 확인 — 용도지역·저촉여부만 제공, 건폐율·용적률·규제는 이 API에 없음(확인됨) |
-| F-04 지도(좌표 변환) | Geocoder API (VWorld) | ✅ 확인 |
+
+| 기능             | 사용 API                                | 확인 상태                                             |
+| -------------- | ------------------------------------- | ------------------------------------------------- |
+| F-01 주소 검색     | 도로명주소 API (juso.go.kr)                | ✅ 확인                                              |
+| F-02 토지대장      | 토지·임야정보 API (VWorld)                  | ✅ 확인                                              |
+| F-03 건축물대장     | 건축물대장정보 API (data.go.kr, 건축HUB)       | ✅ 확인                                              |
+| F-04 공시지가      | 개별공시지가 API (VWorld)                   | ✅ 확인 (일부)                                         |
+| F-05 토지이용계획    | 토지이용계획 API (VWorld, `getLandUseAttr`) | ⚠️ 확인 — 용도지역·저촉여부만 제공, 건폐율·용적률·규제는 이 API에 없음(확인됨) |
+| F-04 지도(좌표 변환) | Geocoder API (VWorld)                 | ✅ 확인                                              |
+
 
 ### 8-1. 확인된 내용
 
 **도로명주소 API** — `https://business.juso.go.kr/addrlink/addrLinkApi.do` (GET/POST, xml/json), 크로스도메인용 JSONP: `addrLinkApiJsonp.do`
+
 - 파라미터: `confmKey`(승인키, 필수), `currentPage`/`countPerPage`(페이징, 필수), `keyword`(검색어, 필수), `resultType`(xml/json), `hstryYn`/`firstSort`/`addInfoYn`(부가 옵션)
 - 응답 필드(주요): `roadAddr`/`jibunAddr`(도로명/지번주소), `zipNo`, `siNm`/`sggNm`/`emdNm`/`liNm`(시도/시군구/읍면동/법정리), `admCd`(행정구역코드), `rnMgtSn`(도로명코드), `bdMgtSn`(건물관리번호), `buldMnnm`/`buldSlno`(건물본번/부번), `mtYn`(산여부 0:대지·1:산), `lnbrMnnm`(지번본번), `lnbrSlno`(사이트 설명은 "읍면동일련번호"라고 되어 있으나, `buldSlno`와의 명명 규칙상 지번부번을 뜻하는 것으로 보임 — 실제 응답값으로 재확인 필요)
 - **PNU 자체는 없지만, `admCd`(행정구역코드) + `mtYn`(산여부) + `lnbrMnnm`(본번) + `lnbrSlno`(부번)를 조합하면 F-02·F-05가 쓰는 `pnu`(19자리: 법정동코드10 + 산여부1 + 본번4 + 부번4)를 구성할 수 있는 구조로 보인다.** 다만 `admCd`가 정확히 10자리 법정동코드와 동일한지는 문서에 명시돼 있지 않아 실제 호출 결과로 확인이 필요하다.
 - 인증키(`confmKey`)는 8-1 하단 "인증키 통합" 항목대로 `VWORLD_API_KEY`를 사용하기로 확정됨
 
 **건축물대장정보 API (건축HUB)** — Base URL `apis.data.go.kr/1613000/BldRgstHubService`, 인증은 data.go.kr 표준 `serviceKey` (VWorld와 무관 — `BUILDING_API_KEY`로 분리한 게 맞았음)
+
 - **식별 파라미터가 `pnu`가 아니다.** `sigunguCd`(시군구코드, 필수) + `bjdongCd`(법정동코드, 필수) + `platGbCd`(대지구분코드: 0:대지·1:산·2:블록, 선택) + `bun`(번, 선택) + `ji`(지, 선택) 조합으로 조회한다. 도로명주소 API의 `admCd`를 앞 5자리(`sigunguCd`)/뒤 5자리(`bjdongCd`)로 나누고, `mtYn`→`platGbCd`, `lnbrMnnm`→`bun`, `lnbrSlno`→`ji`로 매핑하면 될 것으로 보이나, `platGbCd`의 "2:블록" 값은 `mtYn`에 없는 값이라 완전히 1:1은 아니다.
 - 여러 오퍼레이션(표제부·기본개요·총괄표제부·층별개요·부속지번·전유공용면적·오수정화시설·주택가격·전유부·지역지구구역) 중 F-03에 필요한 건 아래 2개:
-  - **`getBrTitleInfo`(표제부 조회)**: 응답에 `strctCdNm`(**주구조**), `mainPurpsCdNm`(**용도**), `useAprDay`(**사용승인일**) 포함. 그 외 `platArea`(대지면적), `archArea`(건축면적), `bcRat`(건폐율), `totArea`(연면적), `vlRat`(용적률), `mgmBldrgstPk`(건축물대장 PK) 등도 함께 내려옴
-  - **`getBrFlrOulnInfo`(층별개요 조회)**: 요청 파라미터는 표제부와 동일. 응답이 층 단위 리스트(`item`)이며 각 항목에 `flrGbCdNm`(지상/지하 구분), `flrNoNm`(층번호), `strctCdNm`(층별 구조), `mainPurpsCdNm`(층별 용도), `area`(층별 면적) 포함 — **F-03의 "층별 개요" 요구사항과 정확히 일치**
+  - `**getBrTitleInfo`(표제부 조회)**: 응답에 `strctCdNm`(**주구조**), `mainPurpsCdNm`(**용도**), `useAprDay`(**사용승인일**) 포함. 그 외 `platArea`(대지면적), `archArea`(건축면적), `bcRat`(건폐율), `totArea`(연면적), `vlRat`(용적률), `mgmBldrgstPk`(건축물대장 PK) 등도 함께 내려옴
+  - `**getBrFlrOulnInfo`(층별개요 조회)**: 요청 파라미터는 표제부와 동일. 응답이 층 단위 리스트(`item`)이며 각 항목에 `flrGbCdNm`(지상/지하 구분), `flrNoNm`(층번호), `strctCdNm`(층별 구조), `mainPurpsCdNm`(층별 용도), `area`(층별 면적) 포함 — **F-03의 "층별 개요" 요구사항과 정확히 일치**
 - 해당 필지에 건축물이 없으면 `totalCount: 0`으로 응답할 것으로 보임(다른 data.go.kr 계열 API와 동일한 패턴) — 실제 호출로 확인 필요
 
 **토지임야목록조회 API** — `https://api.vworld.kr/ned/data/ladfrlList`
+
 - 식별 파라미터: `pnu` (고유번호, 필수), `key` (인증키, 필수)
 - 옵션: `format`(xml/json), `numOfRows`, `pageNo`, `domain`
 - 응답 필드: 지목 `lndcgrCode`/`lndcgrCodeNm`, 면적 `lndpclAr`, 소유구분 `posesnSeCode`/`posesnSeCodeNm`
 - **이용상황에 해당하는 필드는 문서에서 확인 안 됨** — 추가 확인 필요
 
 **개별공시지가 API** — `https://api.vworld.kr/ned/data/getIndvdLandPrice`
+
 - 파라미터: `key`(필수), `stdrYear`(기준연도, 옵션), `ldCode`(법정동코드, 옵션), `reqLvl`(시도/시군구/읍면동 단위), `format`
 - 응답 필드: 공시지가 `ladPblntfPclnd`(원/㎡), 기준연도 `stdrYear`
 - **주의**: 식별자가 `pnu`가 아니라 `ldCode`(법정동코드) — 특정 필지 단위로 좁히는 파라미터가 문서 요약에는 보이지 않음. 지번까지 특정해서 조회되는지 확인 필요
@@ -258,6 +272,7 @@ pills는 콘텐츠를 전환하는 탭이 아니라, 아래 섹션으로 스크�
 - **이 프로젝트는 결국 이 오퍼레이션을 안 쓴다** — 8-8에서 필지(`pnu`) 단위 조회가 되는 별도 오퍼레이션 `getIndvdLandPriceAttr`(개별공시지가속성조회)을 찾아 교체했다. `stdrYear`도 생략하면 연도별 이력 전체를 1회 호출로 받을 수 있음을 확인(8-8 참조).
 
 **토지이용계획 API** — `https://api.vworld.kr/ned/data/getLandUseAttr` (2026-07-27 Chrome DevTools로 실제 레퍼런스 페이지 재확인)
+
 - 식별 파라미터: `pnu` (고유번호, 필수), `key` (인증키, 필수) — 토지·임야정보 API와 **동일하게 `pnu` 기반**. 응답 샘플의 `pnu`가 19자리(`1165010800113320002`)인 것도 확인 — 8-1 도로명주소 항목의 "법정동코드10+산여부1+본번4+부번4=19자리" 추정을 뒷받침함
 - 옵션: `cnflcAt`(저촉여부코드: 1 포함/2 저촉/3 접함 — 문서엔 "접합"으로 나와 있었으나 실제 응답은 "접함"임을 8-5 실제 호출로 확인), `prposAreaDstrcCodeNm`(용도지역지구명), `format`, `numOfRows`, `pageNo`, `domain`
 - **응답 필드 전체(레퍼런스 페이지에 명시된 전부)**: `pnu`(고유번호), `ldCode`(법정동코드), `ldCodeNm`(법정동명), `regstrSeCode`/`regstrSeCodeNm`(대장구분코드/명, 예: "토지대장"), `mnnmSlno`(지번), `manageNo`(도면번호), `cnflcAt`/`cnflcAtNm`(저촉여부코드/명), `prposAreaDstrcCode`/`prposAreaDstrcCodeNm`(용도지역지구코드/명), `registDt`(등록일자), `lastUpdtDt`(데이터기준일자)
@@ -266,6 +281,7 @@ pills는 콘텐츠를 전환하는 탭이 아니라, 아래 섹션으로 스크�
 - 오류 코드 체계 확인: `PARAM_REQUIRED`, `INVALID_TYPE`, `INVALID_RANGE`, `INVALID_KEY`, `INCORRECT_KEY`, `UNAVAILABLE_KEY`, `OVER_REQUEST_LIMIT`, `SYSTEM_ERROR`, `UNKNOWN_ERROR` — VWorld 계열 API 공통으로 보이며, 9장 "공공 API 오류를 서비스 표준 오류로 변환" 시 이 코드를 매핑 기준으로 쓸 수 있음
 
 **Geocoder API (주소→좌표)** — `https://api.vworld.kr/req/address?service=address&request=getCoord`
+
 - 파라미터: `request=GetCoord`, `type`(PARCEL/ROAD), `address`(주소 문자열), `key`(필수)
 - 응답: `result.point.x`, `result.point.y` (기본 좌표계 EPSG:4326)
 - 일일 호출 한도 40,000건
@@ -285,14 +301,16 @@ pills는 콘텐츠를 전환하는 탭이 아니라, 아래 섹션으로 스크�
 
 `backend/.env`에 발급받은 `VWORLD_API_KEY`·`BUILDING_API_KEY`로 6개 API 중 5개를 실제로 호출해봤다. **인증키 문제가 2건 나와서, 이 프로젝트에서 가장 먼저 처리해야 할 이슈다.**
 
-| API | 결과 |
-| --- | --- |
-| 건축HUB 표제부 (`getBrTitleInfo`, `BUILDING_API_KEY`) | ✅ **정상 작동.** 실제 데이터 수신(아래 참조) |
-| Geocoder (`getCoord`, `VWORLD_API_KEY`) | ✅ **정상 작동.** 좌표 정상 수신 |
-| 토지·임야정보 (`ladfrlList`, `VWORLD_API_KEY`) | ❌ `INCORRECT_KEY` |
-| 개별공시지가 (`getIndvdLandPrice`, `VWORLD_API_KEY`) | ❌ `INCORRECT_KEY` |
-| 토지이용계획 (`getLandUseAttr`, `VWORLD_API_KEY`) | ❌ `INCORRECT_KEY` |
-| 도로명주소 (`addrLinkApi`, juso.go.kr, `VWORLD_API_KEY`를 `confmKey`로 시도) | ❌ `E0001` "승인되지 않은 KEY" |
+
+| API                                                                 | 결과                            |
+| ------------------------------------------------------------------- | ----------------------------- |
+| 건축HUB 표제부 (`getBrTitleInfo`, `BUILDING_API_KEY`)                    | ✅ **정상 작동.** 실제 데이터 수신(아래 참조) |
+| Geocoder (`getCoord`, `VWORLD_API_KEY`)                             | ✅ **정상 작동.** 좌표 정상 수신         |
+| 토지·임야정보 (`ladfrlList`, `VWORLD_API_KEY`)                            | ❌ `INCORRECT_KEY`             |
+| 개별공시지가 (`getIndvdLandPrice`, `VWORLD_API_KEY`)                      | ❌ `INCORRECT_KEY`             |
+| 토지이용계획 (`getLandUseAttr`, `VWORLD_API_KEY`)                         | ❌ `INCORRECT_KEY`             |
+| 도로명주소 (`addrLinkApi`, juso.go.kr, `VWORLD_API_KEY`를 `confmKey`로 시도) | ❌ `E0001` "승인되지 않은 KEY"       |
+
 
 ### 8-4. 도로명주소 API 재검증 (2026-07-29)
 
@@ -319,7 +337,7 @@ pills는 콘텐츠를 전환하는 탭이 아니라, 아래 섹션으로 스크�
 주소 검색(F-01, juso.go.kr), 건축물대장(F-03, 건축HUB), 지도 좌표(F-04, VWorld Geocoder)를 실제로 백엔드에 연동했다. `app/main.py`(그 전까지 존재하지 않았음), `app/routers/address.py`·`building.py`·`coordinates.py`, `app/services/building_service.py`를 새로 만들었다. juso.go.kr·apis.data.go.kr는 vworld.kr과 무관한 별도 호스트라 당연히 8-5의 JSONP 예외를 적용하지 않았고, Geocoder도 같은 vworld.kr 호스트이지만 `ned/data`(국가중점데이터) 경로가 아니라 `req/address` 경로라 원래 설계대로 백엔드 경유로 붙였다 — 단, 배포 서버의 vworld.kr 차단이 특정 경로가 아니라 호스트 전체에 걸린 것이라면 이 경로도 막힐 수 있어, 배포 후 안 되면 VWorld 3종과 같은 JSONP 우회를 검토해야 한다(로컬 테스트로는 배포 서버의 차단 여부를 확인할 수 없다).
 
 - **건축HUB는 `Accept: application/json` 헤더가 없으면 HTTP 200에 빈 바디를 반환한다** — 에러도 없이 그냥 아무 내용이 없어서 처음엔 원인 파악이 안 됐다(`api-sample/building-title.py`/`building-floors.py` 작성 중 발견). `httpx`는 기본으로 `Accept: */*`를 보내는데, 이걸로는 실제로 문제가 안 됐다(백엔드 `clients/building_client.py`는 정상 응답을 받음) — 빈 바디는 `Accept` 헤더가 아예 없을 때만 재현됐다.
-- **`BrTitleItem`/`BrFlrOulnItem` 스키마 버그 확정**: `platArea`/`archArea`/`totArea`/`bcRat`/`vlRat`/`grndFlrCnt`/`ugrndFlrCnt`/`area`가 문서상 추정과 달리 실제로는 문자열이 아니라 **JSON 숫자(float/int)**로 내려온다. 기존 스키마는 전부 `str`로 선언돼 있어 실제 호출 시 pydantic이 `ValidationError`를 내며 무조건 실패했다 — `float`/`int`로 수정(pydantic의 lax 모드가 문자열로 오는 경우도 함께 받아주므로 더 안전함). `useAprDay`는 실제로도 문자열이라 그대로 둠.
+- `**BrTitleItem`/`BrFlrOulnItem` 스키마 버그 확정**: `platArea`/`archArea`/`totArea`/`bcRat`/`vlRat`/`grndFlrCnt`/`ugrndFlrCnt`/`area`가 문서상 추정과 달리 실제로는 문자열이 아니라 **JSON 숫자(float/int)**로 내려온다. 기존 스키마는 전부 `str`로 선언돼 있어 실제 호출 시 pydantic이 `ValidationError`를 내며 무조건 실패했다 — `float`/`int`로 수정(pydantic의 lax 모드가 문자열로 오는 경우도 함께 받아주므로 더 안전함). `useAprDay`는 실제로도 문자열이라 그대로 둠.
 - 건축HUB 응답이 이따금 "Error receiving response from backend server"로 실패하는 경우가 있었는데, 재시도하면 정상 응답을 받았다 — data.go.kr 서버 쪽의 일시적 불안정으로 보이며 우리 쪽 코드 문제는 아니다.
 - 실제 검색 결과로 얻은 PNU는 항상 VWorld에 매칭 레코드가 있는 게 아니다(예: 강남파이낸스센터의 실제 파생 PNU `1168010100007370000`은 `ladfrlList`에서 `totalCount: 0`) — 목업 시절엔 4개 후보를 전부 매칭되게 손으로 골라뒀어서 이 "데이터 없음" 케이스가 한 번도 실제로 렌더링된 적이 없었다. `LandSection.jsx`에 `empty` 상태 UI가 아예 없어서 빈 화면으로 보이는 걸 이번에 발견해 추가했다(`BuildingSection.jsx`의 `empty` UI와 동일한 패턴).
 
@@ -327,7 +345,7 @@ pills는 콘텐츠를 전환하는 탭이 아니라, 아래 섹션으로 스크�
 
 8-6에서 백엔드 경유로 붙였던 Geocoder(`req/address`)를 실제 배포 서버 환경에서 `api-sample/geocoder.py`로 호출해보니, 국가중점데이터 3종과 **완전히 동일한 증상**(`RemoteDisconnected`/`502 Bad Gateway`)으로 실패했다. 경로만 다를 뿐(`req/address` vs `ned/data/*`) 실패 양상이 같다는 것은, 차단이 `ned/data` 카테고리 한정이 아니라 **vworld.kr 도메인 전체**에 걸려 있다는 뜻이다 — 7장 "예외" 절의 원인 설명을 이걸로 확정했다.
 
-- `frontend/src/api/vworld.js`에 `fetchCoordinates()`를 추가해 Geocoder도 JSONP로 직접 호출하도록 옮겼다. 실제 호출로 확인: `callback` 파라미터를 지원하고(`콜백함수({...})`, `Content-Type: application/javascript`), 국가중점데이터 카테고리가 아니라서 **`domain` 파라미터 없이도 정상 응답**했다(그래도 일관성을 위해 다른 호출과 동일하게 domain을 실어 보내도록 함).
+- `frontend/src/api/vworld.js`에 `fetchCoordinates()`를 추가해 Geocoder도 JSONP로 직접 호출하도록 옮겼다. 실제 호출로 확인: `callback` 파라미터를 지원하고(`콜백함수({...})`, `Content-Type: application/javascript`), 국가중점데이터 카테고리가 아니라서 `**domain` 파라미터 없이도 정상 응답**했다(그래도 일관성을 위해 다른 호출과 동일하게 domain을 실어 보내도록 함).
 - `backend/app/routers/coordinates.py`(9장 `/api/coordinates` 엔드포인트)는 삭제했다. `backend/app/clients/geocoder_client.py`와 `backend/app/schemas/coordinates.py`, `backend/api-sample/geocoder.py`는 다른 VWorld client들과 같은 이유로 남겨뒀다 — 지금은 어떤 라우터도 호출하지 않지만, 네트워크 차단이 나중에 풀리면 그대로 다시 쓸 수 있다.
 - `frontend/src/api/backend.js`에서 `fetchCoordinates()`를 제거했다 — 이제 이 파일은 juso.go.kr(주소 검색)·건축HUB(건축물대장)만 다룬다.
 
@@ -336,7 +354,7 @@ pills는 콘텐츠를 전환하는 탭이 아니라, 아래 섹션으로 스크�
 VWorld API 목록([dtna_apiSvcFc_s001.do](https://www.vworld.kr/dtna/dtna_apiSvcFc_s001.do), apiNum=25)에서 기존에 쓰던 `getIndvdLandPrice`(개별공시지가조회, ldCode 기준)와는 별개로 **`getIndvdLandPriceAttr`(개별공시지가속성조회)**라는 오퍼레이션을 발견했다 — 이쪽은 식별자가 `pnu`다. 8-5에서 "필지 단위 조회 불가능"으로 확정했던 결론은 `getIndvdLandPrice` 한정이었고, `getIndvdLandPriceAttr`로는 실제로 필지 단위 조회가 됨을 호출로 확인했다.
 
 - 엔드포인트: `https://api.vworld.kr/ned/data/getIndvdLandPriceAttr`. 파라미터는 `pnu`(필수)·`key`·`stdrYear`(옵션)·`format`·`numOfRows`·`pageNo`·`domain`.
-- **`stdrYear`를 생략하고 `numOfRows`를 넉넉히(100) 주면, 그 필지의 연도별 공시지가 이력 전체가 한 번의 호출로 내려온다** — 1990~2026년 40건을 한 번에 받았다(실제 테스트: PNU `1168010100107370000`, 강남파이낸스센터). 연도당 1건이 원칙이지만 같은 연도가 2~3번 중복 내려오는 경우가 있었다(2024·2025) — 값(`pblntfPclnd`, `pblntfDe`)은 완전히 동일하고 `lastUpdtDt`만 달라, 데이터 재동기화 흔적으로 보인다. 프론트에서 연도별로 마지막 레코드만 남기는 방식으로 대응했다.
+- `**stdrYear`를 생략하고 `numOfRows`를 넉넉히(100) 주면, 그 필지의 연도별 공시지가 이력 전체가 한 번의 호출로 내려온다** — 1990~~2026년 40건을 한 번에 받았다(실제 테스트: PNU `1168010100107370000`, 강남파이낸스센터). 연도당 1건이 원칙이지만 같은 연도가 2~~3번 중복 내려오는 경우가 있었다(2024·2025) — 값(`pblntfPclnd`, `pblntfDe`)은 완전히 동일하고 `lastUpdtDt`만 달라, 데이터 재동기화 흔적으로 보인다. 프론트에서 연도별로 마지막 레코드만 남기는 방식으로 대응했다.
 - JSONP도 지원함을 확인(`callback` 파라미터 → `콜백함수({...})`, `Content-Type: application/javascript`) — VWorld 3종과 동일한 방식으로 8-5/8-7의 JSONP 예외에 편입했다.
 - 응답 래퍼: 성공 시 `{"indvdLandPrices": {"field": [...], "totalCount": ...}}`, 매칭 레코드가 없으면(예: 실제 검색으로 파생한 PNU `1168010100007370000`처럼 이 API에 이력이 없는 필지) `{"response": {"totalCount": "0", ...}}` — 다른 VWorld API들과 같은 패턴.
 - 응답 필드: `pnu`, `ldCode`, `ldCodeNm`, `mnnmSlno`(지번), `stdrYear`, `stdrMt`, `pblntfPclnd`(공시지가 원/㎡), `pblntfDe`(공시일자), `stdLandAt`(표준지 여부), `regstrSeCodeNm`, `lastUpdtDt`.
@@ -357,14 +375,16 @@ VWorld API 목록([dtna_apiSvcFc_s001.do](https://www.vworld.kr/dtna/dtna_apiSvc
 > 공시지가는 `getIndvdLandPrice`(ldCode 기준)로는 필지 단위 조회가 불가능했으나(8-5), 필지 단위가 되는 `getIndvdLandPriceAttr`로 교체해(8-8) 다른 3종과 마찬가지로 `pnu`로 조회한다.
 > 토지대장·공시지가·토지이용계획·지도 좌표(Geocoder) 4종은 배포 서버의 vworld.kr 아웃바운드 차단 문제로 백엔드를 거치지 않고 **프론트엔드가 VWorld를 JSONP로 직접 호출**하도록 예외 처리됐다(7장 "예외", 8-7 참조) — 따라서 아래 표의 `/api/land`, `/api/land-price`, `/api/land-use`, `/api/coordinates` 4개 경로는 실제로는 만들지 않는다.
 
-| 메서드 | 경로 | 설명 |
-| --- | --- | --- |
-| GET | `/api/address/search?q=` | 주소 검색, 후보 목록 반환 — **구현 완료(2026-07-29)** |
-| ~~GET~~ | ~~`/api/land/{필지식별자}`~~ | 토지대장 — 프론트가 VWorld 직접 호출로 대체(7장 참조) |
-| GET | `/api/building?sigunguCd=&bjdongCd=&platGbCd=&bun=&ji=` | 건축물대장 — **구현 완료(2026-07-29)**, 식별자 5개가 계층적 리소스가 아니라 평평한 값이라 경로 대신 쿼리 파라미터로 확정 |
-| ~~GET~~ | ~~`/api/land-price/{필지식별자}`~~ | 공시지가 — 프론트가 VWorld 직접 호출(`getIndvdLandPriceAttr`, pnu 기준, 8-8 참조)로 대체(7장 참조) |
-| ~~GET~~ | ~~`/api/land-use/{필지식별자}`~~ | 토지이용계획 — 프론트가 VWorld 직접 호출로 대체(7장 참조) |
-| ~~GET~~ | ~~`/api/coordinates?address=`~~ | 지도 좌표 — 프론트가 VWorld Geocoder 직접 호출(JSONP)로 대체(7장 "예외", 8-7 참조) |
+
+| 메서드     | 경로                                                      | 설명                                                                            |
+| ------- | ------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| GET     | `/api/address/search?q=`                                | 주소 검색, 후보 목록 반환 — **구현 완료(2026-07-29)**                                       |
+| ~~GET~~ | `~~/api/land/{필지식별자}~~`                                 | 토지대장 — 프론트가 VWorld 직접 호출로 대체(7장 참조)                                           |
+| GET     | `/api/building?sigunguCd=&bjdongCd=&platGbCd=&bun=&ji=` | 건축물대장 — **구현 완료(2026-07-29)**, 식별자 5개가 계층적 리소스가 아니라 평평한 값이라 경로 대신 쿼리 파라미터로 확정 |
+| ~~GET~~ | `~~/api/land-price/{필지식별자}~~`                           | 공시지가 — 프론트가 VWorld 직접 호출(`getIndvdLandPriceAttr`, pnu 기준, 8-8 참조)로 대체(7장 참조)  |
+| ~~GET~~ | `~~/api/land-use/{필지식별자}~~`                             | 토지이용계획 — 프론트가 VWorld 직접 호출로 대체(7장 참조)                                         |
+| ~~GET~~ | `~~/api/coordinates?address=~~`                         | 지도 좌표 — 프론트가 VWorld Geocoder 직접 호출(JSONP)로 대체(7장 "예외", 8-7 참조)                |
+
 
 ### 공통 규약
 
@@ -376,13 +396,15 @@ VWorld API 목록([dtna_apiSvcFc_s001.do](https://www.vworld.kr/dtna/dtna_apiSvc
 
 ## 10. 비기능 요구사항
 
-| 항목 | 내용 |
-| --- | --- |
-| 응답 속도 | 매 조회마다 공공 API 호출 결과에 종속 (캐시 없음) |
-| 타임아웃 | 공공 API 호출에 타임아웃 설정, 초과 시 오류 상태로 전환 |
-| 오류 처리 | 4종 중 하나가 실패해도 나머지 pills는 정상 동작해야 함 |
-| 호출량 | Geocoder API는 일 40,000건 한도 확인됨. 나머지 5개는 미확인 (캐시가 없어 제한에 더 민감함) |
-| 반응형 | 데스크톱 기준, 모바일 대응 불필요 |
+
+| 항목    | 내용                                                             |
+| ----- | -------------------------------------------------------------- |
+| 응답 속도 | 매 조회마다 공공 API 호출 결과에 종속 (캐시 없음)                                |
+| 타임아웃  | 공공 API 호출에 타임아웃 설정, 초과 시 오류 상태로 전환                             |
+| 오류 처리 | 4종 중 하나가 실패해도 나머지 pills는 정상 동작해야 함                             |
+| 호출량   | Geocoder API는 일 40,000건 한도 확인됨. 나머지 5개는 미확인 (캐시가 없어 제한에 더 민감함) |
+| 반응형   | 데스크톱 기준, 모바일 대응 불필요                                            |
+
 
 ---
 
@@ -392,18 +414,19 @@ VWorld API 목록([dtna_apiSvcFc_s001.do](https://www.vworld.kr/dtna/dtna_apiSvc
 
 ### 결정된 사항 (참고)
 
-| 항목 | 결정 내용 |
-| --- | --- |
-| 도로명주소 `admCd` 구조 | 10자리 법정동코드로 확정, `sigunguCd`(앞5)+`bjdongCd`(뒤5)로 분리 가능 — 8-3 실제 호출 테스트로 확인(2026-07-28) |
-| F-05 건폐율·용적률·규제 출처 | 건폐율·용적률은 건축물대장 API(`getBrTitleInfo`)에서, 규제는 토지이용계획 API(`getLandUseAttr`) 응답 배열에서 얻는다 — 규제 항목은 기획에서 빠진 게 아니라 그대로 유지 |
-| 6개 API 인증키 발급 단위 | VWorld 4종(토지·임야정보·토지이용계획·개별공시지가·Geocoder)은 `VWORLD_API_KEY` 통합, 건축물대장은 `BUILDING_API_KEY` 별도 (확정, 2026-07-27). 도로명주소는 별도 키 필요로 정정됐고(8-3), `JUSO_API_KEY` 발급·재호출 테스트로 정상 작동 확인됨(2026-07-29, 8-4 참조) |
-| 도로명주소·건축물대장 API 명세 | Chrome DevTools로 실제 문서 페이지를 렌더링해 확인 완료 (2026-07-27) — 8-1 참조 |
-| 배포 환경 | 로컬 |
-| VWorld 국가중점데이터 3종 `INCORRECT_KEY` 원인 | 활용신청 미승인이 아니라 **도메인 검증 문제**였음 — 요청에 키 발급 시 등록한 도메인과 일치하는 `domain` 쿼리 파라미터·`Referer` 헤더를 실어야 정상 응답 — 8-5 실제 호출 테스트로 확인(2026-07-29) |
-| F-04 공시지가 트래커 설계 | `getIndvdLandPrice`(ldCode 기준)는 필지 단위 조회 불가능(8-5) — 한때 법정동 단위 통계로 재설계했었으나, 같은 날 필지 단위가 되는 `getIndvdLandPriceAttr`를 찾아 교체해 **원래 기획대로 필지(pnu) 단위 5개년 차트로 최종 확정**(2026-07-29, 8-8 참조). 상세는 4장 F-04 참조 |
-| 도로명주소·지번주소 입력 범위 | **도로명 주소만 지원**하는 것으로 확정(2026-07-30) — juso.go.kr 검색 API가 이미 지번주소도 결과에 함께 반환하므로(`jibunAddr` 필드) 검색 자체는 지번으로도 걸리지만, 입력창에 지번만 쳤을 때의 자동완성/보정 로직은 추가하지 않는다 |
-| 차트 라이브러리 | **Recharts 등 별도 라이브러리는 도입하지 않고, 기존 수작업 SVG(`utils/format.js`의 `buildChart()`)를 그대로 유지**하기로 확정(2026-07-30) — 단일 시계열 5개 점 + 결측 구간 끊기만 필요한 단순한 차트라, 이미 정확히 그 요구사항만 구현한 코드가 있는 상태에서 라이브러리(D3 기반이라 번들 크기도 늘어남)를 새로 넣는 게 더 비효율적이라고 판단함. 이후 차트 요구사항이 복잡해지면(다중 시계열, 확대/축소, 툴팁 등) 그때 재검토 |
-| 지도 표시 라이브러리 | **Leaflet(`react-leaflet`) 도입 확정**(2026-07-30) — `PriceSection.jsx`의 목업 지도를 실제 Leaflet 지도(OpenStreetMap 타일)로 교체, 좌표(Geocoder)에 마커 표시. 구현 내용은 12장 Phase 4 참조 |
+
+| 항목                                   | 결정 내용                                                                                                                                                                                                                                                                           |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 도로명주소 `admCd` 구조                     | 10자리 법정동코드로 확정, `sigunguCd`(앞5)+`bjdongCd`(뒤5)로 분리 가능 — 8-3 실제 호출 테스트로 확인(2026-07-28)                                                                                                                                                                                           |
+| F-05 건폐율·용적률·규제 출처                   | 건폐율·용적률은 건축물대장 API(`getBrTitleInfo`)에서, 규제는 토지이용계획 API(`getLandUseAttr`) 응답 배열에서 얻는다 — 규제 항목은 기획에서 빠진 게 아니라 그대로 유지                                                                                                                                                              |
+| 6개 API 인증키 발급 단위                     | VWorld 4종(토지·임야정보·토지이용계획·개별공시지가·Geocoder)은 `VWORLD_API_KEY` 통합, 건축물대장은 `BUILDING_API_KEY` 별도 (확정, 2026-07-27). 도로명주소는 별도 키 필요로 정정됐고(8-3), `JUSO_API_KEY` 발급·재호출 테스트로 정상 작동 확인됨(2026-07-29, 8-4 참조)                                                                              |
+| 도로명주소·건축물대장 API 명세                   | Chrome DevTools로 실제 문서 페이지를 렌더링해 확인 완료 (2026-07-27) — 8-1 참조                                                                                                                                                                                                                    |
+| 배포 환경                                | 로컬                                                                                                                                                                                                                                                                              |
+| VWorld 국가중점데이터 3종 `INCORRECT_KEY` 원인 | 활용신청 미승인이 아니라 **도메인 검증 문제**였음 — 요청에 키 발급 시 등록한 도메인과 일치하는 `domain` 쿼리 파라미터·`Referer` 헤더를 실어야 정상 응답 — 8-5 실제 호출 테스트로 확인(2026-07-29)                                                                                                                                               |
+| F-04 공시지가 트래커 설계                     | `getIndvdLandPrice`(ldCode 기준)는 필지 단위 조회 불가능(8-5) — 한때 법정동 단위 통계로 재설계했었으나, 같은 날 필지 단위가 되는 `getIndvdLandPriceAttr`를 찾아 교체해 **원래 기획대로 필지(pnu) 단위 5개년 차트로 최종 확정**(2026-07-29, 8-8 참조). 상세는 4장 F-04 참조                                                                              |
+| 도로명주소·지번주소 입력 범위                     | **도로명 주소만 지원**하는 것으로 확정(2026-07-30) — juso.go.kr 검색 API가 이미 지번주소도 결과에 함께 반환하므로(`jibunAddr` 필드) 검색 자체는 지번으로도 걸리지만, 입력창에 지번만 쳤을 때의 자동완성/보정 로직은 추가하지 않는다                                                                                                                           |
+| 차트 라이브러리                             | **Recharts 등 별도 라이브러리는 도입하지 않고, 기존 수작업 SVG(`utils/format.js`의 `buildChart()`)를 그대로 유지**하기로 확정(2026-07-30) — 단일 시계열 5개 점 + 결측 구간 끊기만 필요한 단순한 차트라, 이미 정확히 그 요구사항만 구현한 코드가 있는 상태에서 라이브러리(D3 기반이라 번들 크기도 늘어남)를 새로 넣는 게 더 비효율적이라고 판단함. 이후 차트 요구사항이 복잡해지면(다중 시계열, 확대/축소, 툴팁 등) 그때 재검토 |
+| 지도 표시 라이브러리                          | **Leaflet(`react-leaflet`) 도입 확정**(2026-07-30) — `PriceSection.jsx`의 목업 지도를 실제 Leaflet 지도(OpenStreetMap 타일)로 교체, 좌표(Geocoder)에 마커 표시. 구현 내용은 12장 Phase 4 참조                                                                                                                     |
 
 
 ---
@@ -451,3 +474,4 @@ VWorld API 목록([dtna_apiSvcFc_s001.do](https://www.vworld.kr/dtna/dtna_apiSvc
 
 - 오류 / 예외 상황 점검
 - 배포
+

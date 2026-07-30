@@ -95,7 +95,7 @@ input::placeholder {
 .floor-details > summary > .floor-label::before {
   content: "▸";
   color: #8c877e;
-  font-size: 11px;
+  font-size: 20px;
   margin-right: 8px;
 }
 .floor-details[open] > summary > .floor-label::before {
