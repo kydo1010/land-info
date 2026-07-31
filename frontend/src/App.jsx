@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Header from "./components/Header.jsx";
 import EmptyState from "./components/EmptyState.jsx";
 import SummarySection from "./components/SummarySection.jsx";
@@ -27,6 +27,7 @@ export default function App() {
   const [tabs, setTabs] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [activeSection, setActiveSection] = useState("summary");
+  const blankTabCounter = useRef(0);
 
   const patch = (id, obj) => {
     setTabs((prev) => prev.map((t) => (t.id === id ? { ...t, ...obj } : t)));
@@ -81,6 +82,8 @@ export default function App() {
   const select = (c) => {
     const id = c.pnu;
     const alreadyOpen = tabs.some((t) => t.id === id);
+    const activeTab = tabs.find((t) => t.id === activeId);
+    const isBlankActive = !!activeTab && activeTab.cand === null;
     if (!alreadyOpen) {
       const tab = {
         id,
@@ -96,7 +99,12 @@ export default function App() {
         coords: null,
         fetchedAt: timestamp(),
       };
-      setTabs((prev) => (prev.some((t) => t.id === id) ? prev : [...prev, tab]));
+      // 새 탭(cand: null)에서 검색해 주소를 고른 경우 그 자리를 채우고, 그 외에는 탭을 새로 연다.
+      setTabs((prev) => {
+        if (prev.some((t) => t.id === id)) return prev;
+        if (isBlankActive) return prev.map((t) => (t.id === activeId ? tab : t));
+        return [...prev, tab];
+      });
       loadLand(id);
       loadZone(id);
       loadPrice(id);
@@ -132,6 +140,23 @@ export default function App() {
   };
 
   const newTab = () => {
+    const id = `blank-${blankTabCounter.current++}`;
+    const tab = {
+      id,
+      cand: null,
+      zone: "idle",
+      land: "idle",
+      bld: "idle",
+      price: "idle",
+      zoneInfo: null,
+      landInfo: null,
+      priceChart: null,
+      buildingInfo: null,
+      coords: null,
+      fetchedAt: null,
+    };
+    setTabs((prev) => [...prev, tab]);
+    setActiveId(id);
     setQuery("");
     setSearch("idle");
     setCandidates([]);
@@ -183,6 +208,9 @@ export default function App() {
   const dash = "—";
 
   const tabItems = tabs.map((t) => {
+    if (!t.cand) {
+      return { id: t.id, title: "새 탭", subtitle: "주소를 검색하세요", zone: "idle", land: "idle", bld: "idle", price: "idle" };
+    }
     const busy = [t.zone, t.land, t.bld, t.price].some((x) => x === "loading");
     const zoneLabel = t.zoneInfo ? t.zoneInfo.use : dash;
     const priceLabel = t.priceChart ? `${t.priceChart.priceLatest}원/㎡` : dash;
@@ -239,7 +267,7 @@ export default function App() {
           setActiveId(id);
           setSearch("idle");
           const t = tabs.find((x) => x.id === id);
-          if (t) setQuery(t.cand.jibun);
+          setQuery(t && t.cand ? t.cand.jibun : "");
         }}
         onCloseTab={closeTab}
         onNewTab={newTab}
