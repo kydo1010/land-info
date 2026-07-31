@@ -54,9 +54,17 @@ class BrTitleItem(CamelModel):
 
 
 class BrFlrOulnItem(CamelModel):
-    """건축HUB 층별개요 조회(getBrFlrOulnInfo) 응답 원본 필드 (8-1 참조)."""
+    """건축HUB 층별개요 조회(getBrFlrOulnInfo) 응답 원본 필드 (8-1 참조).
 
+    bld_nm(건물명)·dong_nm(동명칭)은 실제 호출로 필드명을 확인했다(강남파이낸스센터: bldNm="강남파이낸스센터",
+    dongNm="주건축물제1동"). flr_no는 지상/지하 모두 양수로 내려오고(예: 지하1층도 flrNo=1),
+    flr_gb_cd_nm("지상"/"지하")으로만 구분된다 — 층수 정렬 시 지하는 부호를 뒤집어야 한다.
+    """
+
+    bld_nm: str = ""
+    dong_nm: str = ""
     flr_gb_cd_nm: str
+    flr_no: int
     flr_no_nm: str
     strct_cd_nm: str
     main_purps_cd_nm: str
@@ -103,11 +111,13 @@ class BrWclfItem(CamelModel):
 
 
 class FloorRow(CamelModel):
+    category: str
+    building_name: str
+    dong_name: str
     floor: str
     purpose: str
     struct: str
     area: str
-    category: str
 
 
 class Certification(CamelModel):
@@ -214,6 +224,11 @@ def _unique_no(sigungu_cd: str, bjdong_cd: str, plat_gb_cd: str, bun: str, ji: s
     return f"{sigungu_cd}{bjdong_cd}-{plat_gb_cd}-{bun}{ji}"
 
 
+def _floor_sort_key(f: BrFlrOulnItem) -> tuple[str, str, int]:
+    signed_floor = -f.flr_no if f.flr_gb_cd_nm == "지하" else f.flr_no
+    return (f.bld_nm, f.dong_nm, signed_floor)
+
+
 def empty_building_record() -> BuildingRecord:
     return BuildingRecord(status="empty")
 
@@ -260,13 +275,15 @@ def to_building_record(
         floor_summary=f"지하 {title.ugrnd_flr_cnt}층 / 지상 {title.grnd_flr_cnt}층 · 연면적 {_fmt_area(title.tot_area)}",
         floors=[
             FloorRow(
+                category=_fmt_text(f.main_atch_gb_cd_nm),
+                building_name=_fmt_text(f.bld_nm),
+                dong_name=_fmt_text(f.dong_nm),
                 floor=f.flr_no_nm if f.flr_no_nm.startswith("지") else f"{f.flr_gb_cd_nm} {f.flr_no_nm}",
                 purpose=f.main_purps_cd_nm,
                 struct=f.strct_cd_nm,
                 area=f"{f.area:,.2f}",
-                category=_fmt_text(f.main_atch_gb_cd_nm),
             )
-            for f in floors
+            for f in sorted(floors, key=_floor_sort_key)
         ],
         unique_no=_unique_no(sigungu_cd, bjdong_cd, plat_gb_cd, bun, ji),
         building_id=basis.bldg_id.strip() if basis and basis.bldg_id.strip() else None,

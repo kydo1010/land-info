@@ -141,7 +141,7 @@ export default function BuildingSection({ status, building, onRetry }) {
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "70px 100px 1fr 130px 120px",
+                    gridTemplateColumns: "70px 150px 130px 90px 1fr 130px 110px",
                     fontSize: 11.5,
                     color: "#8C877E",
                     padding: "0 2px 9px",
@@ -149,7 +149,9 @@ export default function BuildingSection({ status, building, onRetry }) {
                   }}
                 >
                   <div>구분</div>
-                  <div>층</div>
+                  <div>건물명</div>
+                  <div>동명칭</div>
+                  <div>층수</div>
                   <div>용도</div>
                   <div>구조</div>
                   <div style={{ textAlign: "right" }}>면적 (㎡)</div>
@@ -167,7 +169,7 @@ export default function BuildingSection({ status, building, onRetry }) {
                         key={i}
                         style={{
                           display: "grid",
-                          gridTemplateColumns: "70px 100px 1fr 130px 120px",
+                          gridTemplateColumns: "70px 150px 130px 90px 1fr 130px 110px",
                           fontSize: 15.5,
                           padding: "11px 2px",
                           borderBottom: "1px solid #F3F0E9",
@@ -175,6 +177,8 @@ export default function BuildingSection({ status, building, onRetry }) {
                         }}
                       >
                         <div style={{ color: "#6B665E", fontSize: 14 }}>{f.category}</div>
+                        <div style={{ fontSize: 14.5, letterSpacing: "-.01em" }}>{f.buildingName}</div>
+                        <div style={{ color: "#6B665E", fontSize: 14.5 }}>{f.dongName}</div>
                         <div style={{ color: "#3D3A34" }}>{f.floor}</div>
                         <div style={{ letterSpacing: "-.01em" }}>{f.purpose}</div>
                         <div style={{ color: "#6B665E", fontSize: 14.5 }}>{f.struct}</div>
