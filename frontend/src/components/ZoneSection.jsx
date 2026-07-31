@@ -1,11 +1,18 @@
+import { useState } from "react";
+
 const TAG_STYLE = {
   저촉: { bg: "#F6E7E0", fg: "#8E3B21" },
   접함: { bg: "#EFEDE5", fg: "#6B665E" },
   포함: { bg: "#E7EFEC", fg: "#1F4B43" },
 };
 
+const COLLAPSED_HEIGHT = 190;
+
 export default function ZoneSection({ status, use, rules }) {
   const loading = status === "loading";
+  const [expanded, setExpanded] = useState(false);
+  const canCollapse = rules.length >= 5;
+  const isCollapsed = canCollapse && !expanded;
   const counts = ["포함", "저촉", "접함"].map((kind) => {
     const n = rules.filter((r) => r.kind === kind).length;
     return { kind, count: n + "건", color: n ? "#171614" : "#C9C3B6", ...TAG_STYLE[kind] };
@@ -80,37 +87,86 @@ export default function ZoneSection({ status, use, rules }) {
               <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em", marginBottom: 12 }}>
                 저촉·포함 규제 {rules.length}건
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 1, background: "#EDEAE2" }}>
-  {rules.map((r) => (
-                  <div
-                    key={r.no}
-                    style={{
-                      background: "#FFFFFF",
-                      padding: "12px 2px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 14,
-                    }}
-                  >
-                    <span style={{ fontSize: 10.5, color: "#8C877E", width: 22 }}>{r.no}</span>
-                    <span
+              <div style={{ position: "relative" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 1,
+                    background: "#EDEAE2",
+                    maxHeight: isCollapsed ? COLLAPSED_HEIGHT : 4000,
+                    overflow: "hidden",
+                    transition: "max-height .3s ease",
+                  }}
+                >
+                  {rules.map((r) => (
+                    <div
+                      key={r.no}
                       style={{
-                        fontSize: 11.5,
-                        padding: "3px 9px",
-                        borderRadius: 999,
-                        background: TAG_STYLE[r.kind].bg,
-                        color: TAG_STYLE[r.kind].fg,
-                        width: 44,
-                        textAlign: "center",
-                        flex: "none",
+                        background: "#FFFFFF",
+                        padding: "12px 2px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 14,
                       }}
                     >
-                      {r.kind}
-                    </span>
-                    <span style={{ fontSize: 16, flex: 1, letterSpacing: "-.01em" }}>{r.name}</span>
-                  </div>
-                ))}
+                      <span style={{ fontSize: 10.5, color: "#8C877E", width: 22 }}>{r.no}</span>
+                      <span
+                        style={{
+                          fontSize: 11.5,
+                          padding: "3px 9px",
+                          borderRadius: 999,
+                          background: TAG_STYLE[r.kind].bg,
+                          color: TAG_STYLE[r.kind].fg,
+                          width: 44,
+                          textAlign: "center",
+                          flex: "none",
+                        }}
+                      >
+                        {r.kind}
+                      </span>
+                      <span style={{ fontSize: 16, flex: 1, letterSpacing: "-.01em" }}>{r.name}</span>
+                    </div>
+                  ))}
+                </div>
+                {isCollapsed && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: 72,
+                      background: "linear-gradient(to bottom, rgba(255,255,255,0), #FFFFFF 85%)",
+                      pointerEvents: "none",
+                    }}
+                  />
+                )}
               </div>
+              {canCollapse && (
+                <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
+                  <button
+                    onClick={() => setExpanded((v) => !v)}
+                    className="btn-showmore"
+                    style={{
+                      border: "1px solid #D8D3C8",
+                      background: "#FFFFFF",
+                      borderRadius: 999,
+                      padding: "8px 20px",
+                      fontSize: 13,
+                      fontFamily: "inherit",
+                      color: "#3D3A34",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <span>{expanded ? "접기" : "더보기"}</span>
+                    <span aria-hidden="true">{expanded ? "∧" : "∨"}</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

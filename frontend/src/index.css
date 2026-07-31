@@ -61,6 +61,10 @@ input::placeholder {
   border-color: #1f4b43 !important;
   color: #1f4b43 !important;
 }
+.btn-showmore:hover {
+  border-color: #1f4b43 !important;
+  color: #1f4b43 !important;
+}
 .pill:hover {
   border-color: #1f4b43 !important;
   text-decoration: none !important;
@@ -84,20 +88,4 @@ input::placeholder {
 .search-input:focus {
   border-color: #1f4b43 !important;
   box-shadow: 0 0 0 3px rgba(31, 75, 67, 0.09);
-}
-
-.floor-details > summary {
-  list-style: none;
-}
-.floor-details > summary::-webkit-details-marker {
-  display: none;
-}
-.floor-details > summary > .floor-label::before {
-  content: "▸";
-  color: #8c877e;
-  font-size: 20px;
-  margin-right: 8px;
-}
-.floor-details[open] > summary > .floor-label::before {
-  content: "▾";
 }

@@ -1,3 +1,7 @@
+import { useState } from "react";
+
+const FLOORS_COLLAPSED_HEIGHT = 190;
+
 function InfoRow({ label, value }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "170px 1fr", padding: "10px 2px", borderBottom: "1px solid #F3F0E9", fontSize: 14.5, alignItems: "baseline" }}>
@@ -25,6 +29,10 @@ export default function BuildingSection({ status, building, onRetry }) {
   const empty = status === "empty";
   const error = status === "error";
   const b = building || {};
+  const [floorsExpanded, setFloorsExpanded] = useState(false);
+  const floors = b.floors || [];
+  const canCollapseFloors = floors.length >= 5;
+  const isFloorsCollapsed = canCollapseFloors && !floorsExpanded;
 
   return (
     <section id="bld" data-screen-label="건축물대장" style={{ scrollMarginTop: 190 }}>
@@ -118,19 +126,18 @@ export default function BuildingSection({ status, building, onRetry }) {
                 <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: "-.02em", color: "#777777" }}>사용승인일</h3>
                 <div style={{ fontSize: 16 }}>{b.approved}</div>
               </div>
-              <details className="floor-details">
-                <summary
+              <div>
+                <div
                   style={{
                     display: "flex",
                     alignItems: "baseline",
                     gap: 10,
                     marginBottom: 12,
-                    cursor: "pointer",
                   }}
                 >
-                  <h3 className="floor-label" style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: "-.02em", color: "#777777" }}>층별 개요</h3>
+                  <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: "-.02em", color: "#777777" }}>층별 개요</h3>
                   <div style={{ fontSize: 16, color: "#A6A19A" }}>{b.floorSummary}</div>
-                </summary>
+                </div>
                 <div
                   style={{
                     display: "grid",
@@ -147,26 +154,73 @@ export default function BuildingSection({ status, building, onRetry }) {
                   <div>구조</div>
                   <div style={{ textAlign: "right" }}>면적 (㎡)</div>
                 </div>
-                {(b.floors || []).map((f, i) => (
+                <div style={{ position: "relative" }}>
                   <div
-                    key={i}
                     style={{
-                      display: "grid",
-                      gridTemplateColumns: "70px 100px 1fr 130px 120px",
-                      fontSize: 15.5,
-                      padding: "11px 2px",
-                      borderBottom: "1px solid #F3F0E9",
-                      alignItems: "center",
+                      maxHeight: isFloorsCollapsed ? FLOORS_COLLAPSED_HEIGHT : 4000,
+                      overflow: "hidden",
+                      transition: "max-height .3s ease",
                     }}
                   >
-                    <div style={{ color: "#6B665E", fontSize: 14 }}>{f.category}</div>
-                    <div style={{ color: "#3D3A34" }}>{f.floor}</div>
-                    <div style={{ letterSpacing: "-.01em" }}>{f.purpose}</div>
-                    <div style={{ color: "#6B665E", fontSize: 14.5 }}>{f.struct}</div>
-                    <div style={{ textAlign: "right" }}>{f.area}</div>
+                    {floors.map((f, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "70px 100px 1fr 130px 120px",
+                          fontSize: 15.5,
+                          padding: "11px 2px",
+                          borderBottom: "1px solid #F3F0E9",
+                          alignItems: "center",
+                        }}
+                      >
+                        <div style={{ color: "#6B665E", fontSize: 14 }}>{f.category}</div>
+                        <div style={{ color: "#3D3A34" }}>{f.floor}</div>
+                        <div style={{ letterSpacing: "-.01em" }}>{f.purpose}</div>
+                        <div style={{ color: "#6B665E", fontSize: 14.5 }}>{f.struct}</div>
+                        <div style={{ textAlign: "right" }}>{f.area}</div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </details>
+                  {isFloorsCollapsed && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        height: 72,
+                        background: "linear-gradient(to bottom, rgba(255,255,255,0), #FFFFFF 85%)",
+                        pointerEvents: "none",
+                      }}
+                    />
+                  )}
+                </div>
+                {canCollapseFloors && (
+                  <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
+                    <button
+                      onClick={() => setFloorsExpanded((v) => !v)}
+                      className="btn-showmore"
+                      style={{
+                        border: "1px solid #D8D3C8",
+                        background: "#FFFFFF",
+                        borderRadius: 999,
+                        padding: "8px 20px",
+                        fontSize: 13,
+                        fontFamily: "inherit",
+                        color: "#3D3A34",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <span>{floorsExpanded ? "접기" : "더보기"}</span>
+                      <span aria-hidden="true">{floorsExpanded ? "∧" : "∨"}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             <InfoGroup
