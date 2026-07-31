@@ -62,8 +62,7 @@ input::placeholder {
   color: #1f4b43 !important;
 }
 .btn-showmore:hover {
-  border-color: #1f4b43 !important;
-  color: #1f4b43 !important;
+  background: #e3e2e0 !important;
 }
 .pill:hover {
   border-color: #1f4b43 !important;

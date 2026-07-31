@@ -206,6 +206,7 @@ export default function BuildingSection({ status, building, onRetry }) {
                       onClick={() => setFloorsExpanded((v) => !v)}
                       className="btn-showmore"
                       style={{
+                        width: "80%",
                         border: "1px solid #D8D3C8",
                         background: "#FFFFFF",
                         borderRadius: 999,
@@ -216,6 +217,7 @@ export default function BuildingSection({ status, building, onRetry }) {
                         cursor: "pointer",
                         display: "inline-flex",
                         alignItems: "center",
+                        justifyContent: "center",
                         gap: 6,
                       }}
                     >

@@ -149,6 +149,7 @@ export default function ZoneSection({ status, use, rules }) {
                     onClick={() => setExpanded((v) => !v)}
                     className="btn-showmore"
                     style={{
+                      width: "80%",
                       border: "1px solid #D8D3C8",
                       background: "#FFFFFF",
                       borderRadius: 999,
@@ -159,6 +160,7 @@ export default function ZoneSection({ status, use, rules }) {
                       cursor: "pointer",
                       display: "inline-flex",
                       alignItems: "center",
+                      justifyContent: "center",
                       gap: 6,
                     }}
                   >
