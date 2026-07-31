@@ -9,7 +9,8 @@ import PriceSection from "./components/PriceSection.jsx";
 import { normalizeLand, normalizeZone, normalizePriceRows } from "./data/normalize.js";
 import { buildChart } from "./utils/format.js";
 import { fetchLadfrl, fetchLandUse, fetchLandPriceHistory, fetchCoordinates } from "./api/vworld.js";
-import { searchAddress, fetchBuilding } from "./api/backend.js";
+import { fetchBuilding } from "./api/backend.js";
+import { searchAddress } from "./api/search.js";
 
 const SECTION_IDS = ["summary", "zone", "land", "bld", "price"];
 
@@ -67,9 +68,12 @@ export default function App() {
   };
 
   // F-04 지도 좌표(Geocoder) — 선택된 주소 문자열을 그대로 넣어 얻는다(8-1 참조, PNU 불필요).
+  // cand.addressType은 road/jibun 중 어느 쪽이 완전한 형태로 채워졌는지를 가리킨다(api/search.js 참조) —
+  // 그쪽을 Geocoder의 type 파라미터와 함께 보내야 정확히 지오코딩된다.
   // 4종 섹션과 달리 지도 위 보조 표시일 뿐이라 별도 status는 두지 않고, 실패하면 조용히 "—"로 남긴다.
   const loadCoordinates = (id, cand) => {
-    fetchCoordinates(cand.road)
+    const isRoad = cand.addressType !== "parcel";
+    fetchCoordinates(isRoad ? cand.road : cand.jibun, isRoad ? "road" : "parcel")
       .then((coords) => patch(id, { coords }))
       .catch(() => {});
   };

@@ -52,9 +52,10 @@ directly — never print or copy API key values out of `.env`; add new keys to `
 `frontend/` (React 18 + Vite, plain JS/JSX — no TypeScript, no CSS framework, inline styles) and `backend/`
 (FastAPI) are separate projects. Every report section now hits a real external API — there is no mock data
 left anywhere in this codebase — but *which* layer makes the call differs per section (see the JSONP
-exception below): 토지대장/토지이용계획/공시지가/지도 좌표 go straight from the browser to VWorld; 주소 검색/
-건축물대장 go through the backend as originally designed. Keep that split in mind before "fixing" an
-inconsistency.
+exception below): 토지대장/토지이용계획/공시지가/지도 좌표 go straight from the browser to VWorld; 건축물대장
+goes through the backend as originally designed. 주소 검색 is a hybrid since 2026-07-31 (planning.md 8-9):
+the frontend calls *both* the backend (juso.go.kr) and VWorld search 2.0 directly and merges the results — see
+`frontend/src/api/search.js`. Keep that split in mind before "fixing" an inconsistency.
 
 ### Backend layers (`backend/app/`)
 - `main.py` — the FastAPI app: CORS (`settings.frontend_origin`), a global exception handler that turns any
@@ -97,11 +98,15 @@ inconsistency.
   (`"loading" | "ok" | "empty" | "error"`) plus the normalized data for that section, updated via the local
   `patch(id, partial)` helper. `loadLand`/`loadZone`/`loadPrice`/`loadBuilding` fire the real network calls per
   tab and are reused by both the initial `select()` and each section's retry button. `candidates` (search
-  results) is its own piece of state now, populated by `runSearch()` calling the real backend — there is no
-  static candidate list anymore.
-- `api/backend.js` calls the FastAPI backend (`searchAddress()`, `fetchBuilding()` — only these two); all four
-  VWorld-backed things (`fetchLadfrl()`, `fetchLandUse()`, `fetchLandPriceHistory()`, `fetchCoordinates()`) live
-  in `api/vworld.js` + `api/jsonp.js` instead (see exception below). `data/normalize.js` turns raw VWorld JSON
+  results) is its own piece of state now, populated by `runSearch()` calling `api/search.js`'s hybrid
+  `searchAddress()` — there is no static candidate list anymore.
+- `api/backend.js` calls the FastAPI backend (`searchAddress()`, `fetchBuilding()`); `api/vworld.js` +
+  `api/jsonp.js` call VWorld directly (see exception below) — `fetchLadfrl()`, `fetchLandUse()`,
+  `fetchLandPriceHistory()`, `fetchCoordinates()`, and (since 2026-07-31, planning.md 8-9) its own
+  `searchAddress()` for VWorld search 2.0. `App.jsx` never imports either `searchAddress` directly — it goes
+  through `api/search.js`, which calls both in parallel and merges by `pnu` (juso.go.kr's result wins when the
+  same parcel comes back from both, since only juso.go.kr's 산여부/mtYn bit is trustworthy — see the exception
+  section below for why). `data/normalize.js` turns raw VWorld JSON
   into the view-model each `*Section.jsx` expects — building doesn't need this step since the backend's
   `BuildingRecord` already comes out in that shape (see `schemas/building.py` note above).
   Coordinates (`tab.coords`, `{lat, lng}`) feed `components/ParcelMap.jsx` (Leaflet/`react-leaflet`, OpenStreetMap
@@ -113,20 +118,21 @@ inconsistency.
   outcome, not just a placeholder for "still loading"); `ZoneSection.jsx` currently has no distinct `"empty"`
   branch, which is a known gap, not an oversight to copy elsewhere.
 
-### The VWorld-direct-from-browser exception (important, read before touching land/zone/price/coordinates)
-All four VWorld APIs this app uses — 토지·임야정보 (`ladfrlList`), 개별공시지가 (`getIndvdLandPriceAttr`),
-토지이용계획 (`getLandUseAttr`), and Geocoder (`req/address`, used for map coordinates) — are called **directly
-from the browser via JSONP** (`frontend/src/api/jsonp.js` + `frontend/src/api/vworld.js`), bypassing the
-backend entirely. This is not the general pattern for this app — it's a workaround because the deployed
-backend's outbound IP gets blocked by vworld.kr. Geocoder was originally wired through the backend
-(`app/routers/coordinates.py`) on the theory that the block was specific to the `ned/data` (국가중점데이터)
-path; that router was deleted once a live call from the same deployed-server environment reproduced the exact
-same `RemoteDisconnected`/`502` failure on Geocoder's `req/address` path, confirming the block is host-wide,
-not path-specific (planning.md 8-7). **If you're tempted to route any vworld.kr call through the backend,
-assume it will be blocked too** — the presumption has flipped from "innocent until proven blocked" to
-"blocked until proven otherwise" for this host. Address search (juso.go.kr) and 건축물대장 (data.go.kr) are
-different hosts entirely and are not known to be blocked, so they go through the backend as originally
-intended (`app/routers/address.py`, `app/routers/building.py`).
+### The VWorld-direct-from-browser exception (important, read before touching land/zone/price/coordinates/search)
+Five VWorld APIs this app uses — 토지·임야정보 (`ladfrlList`), 개별공시지가 (`getIndvdLandPriceAttr`),
+토지이용계획 (`getLandUseAttr`), Geocoder (`req/address`, used for map coordinates), and search 2.0
+(`req/search`, used for address search) — are called **directly from the browser via JSONP**
+(`frontend/src/api/jsonp.js` + `frontend/src/api/vworld.js`), bypassing the backend entirely. This is not the
+general pattern for this app — it's a workaround because the deployed backend's outbound IP gets blocked by
+vworld.kr. Geocoder was originally wired through the backend (`app/routers/coordinates.py`) on the theory that
+the block was specific to the `ned/data` (국가중점데이터) path; that router was deleted once a live call from
+the same deployed-server environment reproduced the exact same `RemoteDisconnected`/`502` failure on
+Geocoder's `req/address` path, confirming the block is host-wide, not path-specific (planning.md 8-7).
+**If you're tempted to route any vworld.kr call through the backend, assume it will be blocked too** — the
+presumption has flipped from "innocent until proven blocked" to "blocked until proven otherwise" for this
+host. 건축물대장 (data.go.kr) is a different host entirely and is not known to be blocked, so it still goes
+through the backend as originally intended (`app/routers/building.py`). Address search (juso.go.kr) is also a
+different host and not blocked, but as of 2026-07-31 it's no longer the sole source for search — see below.
 
 Quirks specific to this JSONP path, all reproduced empirically (planning.md 8-5, 8-7):
 - VWorld's `domain` query param must match **exactly** the domain string registered for that API key — no
@@ -140,6 +146,22 @@ Quirks specific to this JSONP path, all reproduced empirically (planning.md 8-5,
   *unsuccessful* one (e.g. `INCORRECT_KEY`) comes back as bare, unwrapped JSON despite the same
   `Content-Type` — Chrome's ORB (Cross-Origin Read Blocking) then blocks the script load outright, so failures
   surface as a network error (`net::ERR_BLOCKED_BY_ORB`) rather than a catchable JS error with a message.
+- Search 2.0 (`req/search`, address search) requires a `category` of `ROAD` or `PARCEL` when `type=address`,
+  and each category **only matches queries in its own format** — a 지번-style query ("역삼동 737") only hits
+  `category=parcel`, a 도로명-style query ("테헤란로 152") only hits `category=road`; unlike juso.go.kr's
+  single `keyword` param, one call doesn't match both. `frontend/src/api/vworld.js`'s `searchAddress()` calls
+  both categories in parallel and merges by `id`. Response field asymmetry: a `category=parcel` result's
+  `address.parcel` is the full 시/도-inclusive string but `address.road` is partial (no 시/군/구); a
+  `category=road` result is the reverse — and a parcel with no assigned road name at all comes back with
+  `address.road` as an empty string; `searchAddress()` falls back to `jibun` in that case so `road` is never
+  blank downstream. **Confirmed defect, don't trust it**: the response's
+  `item.id` — documented as "PNU" — has its 산여부/mtYn digit (11th digit) hard-coded to `"1"` regardless of
+  the parcel's real 대지/산 status (reproduced on 4 separate 대지 parcels; Geocoder's `refined.structure.level4LC`
+  shares the same bug, so it's not a workaround either — planning.md 8-9). Trusting it breaks 건축HUB lookups
+  for 대지 parcels (the majority) since `platGbCd` comes out wrong. This is exactly why address search stays
+  hybrid instead of switching outright to VWorld: `api/search.js` prefers juso.go.kr's real `mt_yn` when a
+  parcel is in both results, and only falls back to VWorld's `id` (forcing its mtYn digit to `"0"`) for
+  addresses juso.go.kr doesn't have.
 - 개별공시지가 has TWO VWorld operations that look interchangeable but aren't: `getIndvdLandPrice` (identified
   by `ldCode`, a 법정동 only — cannot be narrowed to one parcel, returns every 지목×용도지역 record in that
   법정동) vs. `getIndvdLandPriceAttr` (identified by `pnu` — genuinely parcel-level, one record per year). This

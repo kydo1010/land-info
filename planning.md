@@ -366,6 +366,21 @@ VWorld API 목록([dtna_apiSvcFc_s001.do](https://www.vworld.kr/dtna/dtna_apiSvc
   - `frontend/src/components/PriceSection.jsx` — 법정동 안내 문구·연도 선택 탭·세부 내역 표 제거, 원래(필지 단위) 차트+표 디자인으로 복귀.
 - **부수 발견**: 실제 검색으로 얻은 필지 중엔 이 API에도 이력이 없는 경우가 실제로 있다(위 PNU 사례) — `PriceSection.jsx`에 `empty` 상태 UI가 없어서 빈 화면으로 보이던 걸 이번에 발견해 `LandSection.jsx`/`BuildingSection.jsx`와 같은 패턴으로 추가했다. 요약 카드의 "공시지가" 항목도 `empty`를 "조회 중"과 구분하도록 고쳤다.
 
+### 8-9. 주소 검색(F-01)에 VWorld search 2.0 추가 — juso.go.kr과 하이브리드로 (2026-07-31)
+
+배포 후 실사용 중 juso.go.kr(도로명주소 API)이 지번 주소를 놓치는 사례가 발견됐다 — "경상남도 양산시 덕계동 91-5"(부번까지 있는 세부 지번)로 검색하면 결과가 없다. 반면 "양산시 덕계동 91"(부번 없는 지번)은 정상 검색된다. 원인은 juso.go.kr이 **도로명주소가 실제로 부여된 대상 위주의 인덱스**라서, 부번 단위로는 별도 도로명주소가 없는 세부 분할 지번이나 임야(예: 8-1~8-8 이전에 다뤘던 "청운동 산89-25" 국유지 임야도 같은 이유로 없었다)는 데이터베이스 자체에 없기 때문으로 확인됐다.
+
+VWorld의 통합검색 API 2.0(`https://api.vworld.kr/req/search`, 문서: `v4dv_search2_s001.do`)으로 같은 주소를 검색하면 정상적으로 나온다(`id: 4833012000100910005`, 좌표 포함) — 커버리지가 juso.go.kr보다 넓다. 그래서 juso.go.kr을 완전히 대체하는 대신 **두 API를 병렬로 호출해 합치는 하이브리드**로 갔다 — juso.go.kr 쪽 결과를 우선하고(이유는 아래 결함 참조), juso가 놓친 주소만 VWorld 결과로 채운다(`frontend/src/api/search.js` 신설).
+
+- **엔드포인트/파라미터**: `service=search&request=search&version=2.0&query=&type=address&category=ROAD|ADDRESS일_때_필수&key=&domain=&callback=`(JSONP 지원 확인). `category`는 `ROAD`(도로명) 또는 `PARCEL`(지번) 중 하나를 반드시 골라야 하고, **각 카테고리는 자기 형식의 질의만 매칭한다** — "역삼동 737"(지번 형식)은 `category=parcel`에서만 잡히고 `category=road`는 `NOT_FOUND`, "테헤란로 152"(도로명 형식)는 그 반대다. juso.go.kr의 `keyword`처럼 한 번에 둘 다 잡히지 않으므로, 프론트에서 두 카테고리를 병렬로 호출해 `id` 기준으로 합친다(`frontend/src/api/vworld.js`의 `searchAddress()`).
+- **응답 필드 비대칭**: `category=parcel` 결과는 `address.parcel`(지번)이 시/도까지 포함한 완전한 형태로 오지만 `address.road`(도로명)는 마지막 도로명+번호만 오는 부분 형태다(예: "테헤란로 152", 구·동 생략) — `category=road` 결과는 정확히 반대다. 같은 필지가 양쪽 카테고리에서 다 잡히면 두 결과를 합쳐 완전한 값을 쓰고, 한쪽만 있으면 그 카테고리의 완전한 필드만 신뢰한다(불완전한 쪽은 `addressType`으로 표시해 지오코딩 등 후속 호출에서 그 필드를 안 쓰게 한다). 도로명주소 자체가 없는 필지(위 "덕계동 91-5" 사례)는 `address.road`가 아예 빈 문자열로 온다 — 이 경우 `road`를 `jibun`으로 채워 탭 제목 등이 빈 칸으로 보이지 않게 했다.
+- **치명적 결함(실제 확인, 이래서 juso.go.kr을 우선시킨다)**: 응답의 `item.id`는 VWorld 문서에 "PNU(지번 코드)"라고 설명돼 있지만, **11번째 자리(산여부/mtYn)가 실제 값과 무관하게 항상 "1"로 내려온다.** 명백히 대지인 필지 4건(강남파이낸스센터 역삼동 737, 제주 광령리 1234 ×2회, 부산대 장전동 40)에서 전부 재현됐고, 실제로 산지인 청운동 산89-25만 우연히 "1"이 맞아 처음엔 못 알아챘다. Geocoder(`req/address`)의 `refined.structure.level4LC` 필드도 같은 값·같은 결함을 공유해 대안이 못 된다. 실제 영향도 확인: 이 결함 있는 `id`에서 뽑은 `platGbCd=1`로 건축HUB를 조회하면 실존하는 강남파이낸스센터도 `status: empty`(못 찾음)로 나온다 — VWorld의 `id`를 그대로 믿으면 대지 필지(전체 주소의 대다수) 건축물대장 조회가 깨진다.
+  - **대응**: 하이브리드에서 juso.go.kr 쪽 결과가 있으면 그 실제 `mt_yn` 값을 그대로 쓰고(정확함), juso에 없는 주소만 VWorld 결과를 쓰되 그 산여부 자리는 무시하고 **항상 "0"(대지)으로 고정**한다 — 실제 산지 필지의 건축물대장 조회는 못 맞추지만, 산지엔 애초에 건물이 등록된 경우가 드물어 영향이 작다는 판단(2026-07-31 확정, 사용자 확인).
+  - PNU의 나머지 자리(법정동코드 10자리, 본번·부번 8자리)는 juso.go.kr 파생값과 정확히 일치함을 여러 건에서 확인 — 문제는 오직 산여부 1자리뿐이다.
+- **병합 로직**: `frontend/src/api/search.js`의 `searchAddress()`가 juso(`api/backend.js`)와 VWorld(`api/vworld.js`)를 `Promise.all`로 병렬 호출하고 `pnu` 기준 `Map`으로 합친다 — juso 결과를 먼저 넣고, VWorld 결과는 같은 `pnu`가 없을 때만 추가한다. juso 항목엔 `addressType: "road"`를 붙여(도로명이 항상 완전하므로) VWorld 항목의 `addressType`("road"/"parcel")과 형식을 통일했다.
+- `App.jsx`의 `loadCoordinates()`도 `cand.addressType`을 보고 완전한 쪽 필드(road 또는 jibun)와 그에 맞는 Geocoder `type` 파라미터를 골라 쓰도록 고쳤다 — 부분 형태 주소로 지오코딩하면 동명이인(동명이로) 지역으로 잘못 좌표가 찍힐 수 있어서다.
+- 백엔드는 변경하지 않았다 — `app/routers/address.py`·`clients/juso_client.py`는 여전히 정상 동작하고 하이브리드의 한 축으로 계속 쓰인다(제거 대상 아님).
+
 ---
 
 ## 9. 백엔드 API 설계 (초안)
