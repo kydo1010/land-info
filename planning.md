@@ -391,6 +391,31 @@ VWorld의 통합검색 API 2.0(`https://api.vworld.kr/req/search`, 문서: `v4dv
 - `frontend/src/api/search.js`는 juso 결과에 없는 VWorld candidate에 대해서만 `refineParcelIdentifiers()`를 돌린다(juso가 커버하는 건 이미 정확해서 불필요한 Geocoder 호출을 하지 않는다).
 - `App.jsx`의 `loadCoordinates()`는 `cand.coords`가 이미 있으면(위 보정 과정에서 얻어진 경우) Geocoder를 다시 호출하지 않고 그대로 쓰도록 고쳤다 — 같은 주소를 두 번 지오코딩하는 중복 호출을 피한다.
 
+### 8-11. 8-9/8-10의 전제 자체가 틀렸었다 — PNU 필지구분과 건축HUB `platGbCd`는 다른 코드 체계 (2026-07-31)
+
+8-9에서 "VWorld 검색 API의 `id`가 산여부 자리를 항상 실제 값과 다르게 준다"고 결론 내렸던 건 진단이 잘못됐다. 실제로는 **PNU 19자리의 11번째 자리("필지구분")와 건축HUB의 `platGbCd` 파라미터가 서로 다른 코드 체계**였다 — 이 둘을 같은 값으로 취급한 게 8-9/8-10 내내 있었던 진짜 버그다.
+
+- **PNU의 필지구분**: `1`=일반, `2`=산 (0은 쓰이지 않음).
+- **건축HUB의 `platGbCd`**: `0`=대지, `1`=산, `2`=블록 (기존 문서·8-1 그대로, 변경 없음).
+
+**실제 재현(강남파이낸스센터, 역삼동 737)**: `sigunguCd=11680`+`bjdongCd=10100`+`bun=0737`+`ji=0000`에 대해 필지구분 자리를 0/1/2로 바꿔가며 4개 API를 동시에 호출한 결과:
+
+| 필지구분 자리 | PNU | `ladfrlList` | `getLandUseAttr` | `getIndvdLandPriceAttr` | 건축HUB(`platGbCd`를 같은 자리 값으로 호출) |
+|---|---|---|---|---|---|
+| 0 | `...0007370000` | totalCount 0 | totalCount 0 | totalCount 0 | `platGbCd=0` → **성공**(강남파이낸스센터) |
+| 1 | `...1007370000` | **totalCount 1** | **totalCount 13** | **totalCount 40** | `platGbCd=1` → 실패(empty) |
+| 2 | `...2007370000` | totalCount 0 | totalCount 0 | totalCount 0 | (건축HUB엔 애초에 없는 값) |
+
+같은 패턴이 제주 광령리 1234, 청운동 89-25에서도 재현됐다 — 필지구분 `1`일 때만 `ladfrlList`가 실제 데이터(지목 "대"/"공장용지", `regstrSeCodeNm`: "토지대장")를 반환했다. **8-9/8-10에서 "정보 없음"으로 봤던 강남파이낸스센터 등의 토지대장·토지이용계획·공시지가는 실제로는 데이터가 있었다** — PNU를 만들 때 `mt_yn`/`platGbCd` 값(0/1)을 그대로 필지구분 자리에 꽂아 넣은 게 원인이었다(8-9 이전부터, 이 프로젝트 시작 시점부터 있었던 버그로 보인다).
+
+- **VWorld 검색 API의 `item.id`는 처음부터 정확했다** — 8-9에서 "결함"이라 불렀던 건 사실 `id`가 필지구분(1/2) 체계로 정확히 내려오고 있었는데, 그걸 그대로 `platGbCd`(0/1/2 체계)에 흘려보내는 코드 쪽이 잘못 해석한 것이었다. Geocoder의 `level4LC`도 마찬가지로 처음부터 정확했다.
+- **수정**: 8-10에서 추가했던 `refineParcelIdentifiers()`(Geocoder로 재확인하는 별도 호출)는 더 이상 필요 없어 **삭제**했다 — `id`를 그대로 `pnu`로 쓰고, `platGbCd`만 필지구분 값에서 변환해서 구하면 된다(필지구분 `"2"` → `platGbCd "1"`, 그 외 → `"0"`).
+  - `backend/app/schemas/address.py`의 `to_candidate()`: `mt_yn`을 필지구분(`"2" if mt_yn=="1" else "1"`)으로 변환해 pnu에 넣도록 수정. `plat_gb_cd`는 그대로 `mt_yn`.
+  - `frontend/src/api/vworld.js`의 `toCandidate()`: `pnu`는 `item.id` 그대로 사용(더 이상 강제로 재구성하지 않음), `platGbCd`는 `id`의 11번째 자리에서 변환(`"2"`→`"1"`, 그 외→`"0"`)해서 구함. `refineParcelIdentifiers()` 삭제.
+  - `frontend/src/api/search.js`: `refineParcelIdentifiers` 호출 제거 — 이제 juso와 VWorld 양쪽이 같은 필지구분 계산식을 쓰므로, 같은 실제 필지면 두 소스가 **같은 pnu 문자열**을 내서 기존 `Map` 기반 중복 제거가 그대로 정확히 동작한다(수정 전에는 juso가 `mt_yn`을 그대로, VWorld가 `id`를 그대로 썼던 터라 같은 필지인데도 pnu가 서로 달라 중복 제거가 안 됐을 수 있다).
+  - `App.jsx`의 `loadCoordinates()`: `cand.coords` 우선 사용 로직 제거(더 이상 채워지는 곳이 없어짐).
+- **아직 실측으로 확인 못 한 것**: 필지구분 `"2"`(산)가 실제 임야 데이터를 반환하는 사례는 아직 못 찾았다 — 지금까지 테스트한 필지는 전부 `"1"`(일반)에서만 실제 데이터가 나왔다. `"2"`가 진짜 임야를 가리키는지는 실제 산지 필지로 추가 검증이 필요하다.
+
 ---
 
 ## 9. 백엔드 API 설계 (초안)

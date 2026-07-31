@@ -101,18 +101,9 @@ Quirks specific to this JSONP path, all reproduced empirically (planning.md 8-5,
   `address.parcel` is the full 시/도-inclusive string but `address.road` is partial (no 시/군/구); a
   `category=road` result is the reverse — and a parcel with no assigned road name at all comes back with
   `address.road` as an empty string; `searchAddress()` falls back to `jibun` in that case so `road` is never
-  blank downstream. **Don't trust the response's `item.id`** — documented as "PNU" but its 산여부/mtYn digit
-  (11th digit) doesn't reliably match reality for parcels juso.go.kr already covers (reproduced on 4 separate
-  대지 parcels there); trusting it breaks 건축HUB lookups for those since `platGbCd` comes out wrong. This is
-  exactly why address search stays hybrid instead of switching outright to VWorld: `api/search.js` prefers
-  juso.go.kr's real `mt_yn` whenever a parcel is in both results, and only falls back to VWorld for addresses
-  juso.go.kr doesn't have. For that VWorld-only fallback set, `refineParcelIdentifiers()` in `api/vworld.js`
-  re-derives `pnu`/`platGbCd`/etc. from Geocoder's `refined.structure.level4LC` (queried with `type=parcel`,
-  which is the only type that populates it) rather than trusting `item.id` — confirmed correct in the one
-  juso-uncovered parcel tested so far ("경상남도 양산시 덕계동 91-5", planning.md 8-10, which corrects 8-9's
-  earlier "always force mtYn to 0" call). This only works when `jibun` came through complete
-  (`addressType === "parcel"`) — a `addressType === "road"` candidate (partial `jibun`) can't be reliably
-  re-geocoded by parcel, so it keeps the mtYn-forced-to-`"0"` fallback from 8-9.
+  blank downstream. The response's `item.id` **is a fully correct, ready-to-use `pnu`** — use it directly, don't
+  reconstruct it from parts (see the Identifiers section below for why an earlier version of this file said
+  otherwise).
 - 개별공시지가 has TWO VWorld operations that look interchangeable but aren't: `getIndvdLandPrice` (identified
   by `ldCode`, a 법정동 only — cannot be narrowed to one parcel, returns every 지목×용도지역 record in that
   법정동) vs. `getIndvdLandPriceAttr` (identified by `pnu` — genuinely parcel-level, one record per year). This
@@ -132,13 +123,27 @@ Quirks specific to this JSONP path, all reproduced empirically (planning.md 8-5,
   upstream flakiness, not a bug here.
 
 ### Identifiers
-`pnu` (19 digits) = 법정동코드(10) + 산여부(1: 0=대지/1=산) + 본번(4) + 부번(4) — every VWorld call in this app
-(land, zone, price, and the `ldCode` implicitly embedded in a `pnu`) is keyed off this one value; there's no
-separate ldCode derivation anymore (see the price-API note above). 건축HUB identifies buildings differently:
-`sigunguCd` (앞 5 of the 법정동코드) + `bjdongCd` (뒤 5) +
-`platGbCd`/`bun`/`ji`. `schemas/address.py`'s `to_candidate()` derives *both* identifier schemes from one
-juso.go.kr response (`admCd`/`mtYn`/`lnbrMnnm`/`lnbrSlno`) into a single `AddressCandidate` — that's the one
-place this derivation happens; the frontend never re-derives it.
+`pnu` (19 digits) = 법정동코드(10) + **필지구분**(1 digit: `1`=일반, `2`=산) + 본번(4) + 부번(4) — every VWorld
+call in this app (land, zone, price, and the `ldCode` implicitly embedded in a `pnu`) is keyed off this one
+value; there's no separate ldCode derivation anymore (see the price-API note above). 건축HUB identifies
+buildings **differently and with a different code**: `sigunguCd` (앞 5 of the 법정동코드) + `bjdongCd` (뒤 5) +
+`platGbCd` (`0`=대지, `1`=산, `2`=블록) + `bun`/`ji`.
+
+**These two digits are NOT the same value** despite both describing 대지-vs-산 — mixing them up was a real,
+confirmed bug (2026-07-31, planning.md 8-11) that made every VWorld land/zone/price call for every juso-covered
+address return empty results for most of this project's life, without erroring: `pnu`'s digit was built by
+reusing juso.go.kr's `mt_yn`/`platGbCd` value (`0`/`1`) directly, but the PNU's own digit needs `1`/`2` — so
+every constructed `pnu` was subtly wrong (`...0007370000` instead of the real `...1007370000` for 강남파이낸스센터,
+for example). Live re-test after the fix, same parcel: `ladfrlList` totalCount 0→1, `getLandUseAttr` 0→13,
+`getIndvdLandPriceAttr` 0→40 — while 건축HUB (unaffected, uses the other code) stayed at `platGbCd=0` →
+success throughout. **If you're deriving a `pnu`, always convert**: `parcelGb = mt_yn == "1" ? "2" : "1"` (or
+equivalently, from `platGbCd`), never reuse the 0/1 value as-is in the `pnu`'s digit position.
+`schemas/address.py`'s `to_candidate()` does this conversion for juso.go.kr-derived candidates (that's the one
+place this derivation happens for that source); `frontend/src/api/vworld.js`'s `toCandidate()` does the reverse
+conversion for VWorld search 2.0 candidates, since VWorld's own `item.id` already comes back as a correct,
+ready-to-use `pnu` and only `platGbCd` needs deriving from it. The frontend never re-derives either scheme from
+scratch beyond that. Not yet empirically confirmed: whether 필지구분 `2` genuinely returns 산/임야 data — every
+real parcel tested so far only had data under `1`.
 
 ## Environment files
 Both `backend/.env` and `frontend/.env` are gitignored; `.env.example` in each directory is the template.

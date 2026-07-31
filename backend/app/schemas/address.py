@@ -34,11 +34,15 @@ def to_candidate(item: JusoAddressItem) -> AddressCandidate:
     """도로명주소 API 원본 응답에서 pnu와 건축HUB 식별자(5종)를 파생시킨다.
 
     8-1/8-3 참조: adm_cd(10자리) = sigunguCd(앞5) + bjdongCd(뒤5).
-    pnu(19자리) = adm_cd(10) + mt_yn(1) + lnbr_mnnm(4자리, 0패딩) + lnbr_slno(4자리, 0패딩).
+    pnu(19자리)의 11번째 자리("필지구분")와 건축HUB의 platGbCd는 서로 다른 코드 체계다(2026-07-31,
+    planning.md 8-11 실제 호출로 확인) — PNU 필지구분은 1:일반·2:산이고, platGbCd는 0:대지·1:산·2:블록.
+    mt_yn(0:대지·1:산)을 그대로 pnu 11번째 자리에 넣으면(과거 코드처럼) VWorld의 토지대장/토지이용계획/
+    공시지가 조회가 전부 빈 결과로 나온다 — 반드시 변환해서 넣어야 한다.
     """
     bun = item.lnbr_mnnm.zfill(4)
     ji = item.lnbr_slno.zfill(4)
-    pnu = f"{item.adm_cd}{item.mt_yn}{bun}{ji}"
+    parcel_gb = "2" if item.mt_yn == "1" else "1"
+    pnu = f"{item.adm_cd}{parcel_gb}{bun}{ji}"
     return AddressCandidate(
         road=item.road_addr,
         jibun=item.jibun_addr,
