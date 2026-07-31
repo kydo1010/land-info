@@ -1,4 +1,4 @@
-const EXAMPLES = ["역삼동 737", "제주시 애월읍 광령리 1234", "부산대학로 63번길 2"];
+const EXAMPLES = ["강남구 역삼동 737", "양산시 덕계동 636", "양산시 덕계동 91-5", "부산대학로 63번길 2"];
 
 export default function EmptyState({ onUseExample }) {
   return (
