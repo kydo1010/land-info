@@ -58,66 +58,12 @@ the frontend calls *both* the backend (juso.go.kr) and VWorld search 2.0 directl
 `frontend/src/api/search.js`. Keep that split in mind before "fixing" an inconsistency.
 
 ### Backend layers (`backend/app/`)
-- `main.py` — the FastAPI app: CORS (`settings.frontend_origin`), a global exception handler that turns any
-  `ExternalAPIError` into an `Envelope` error response, and `include_router()` for each router.
-- `routers/` — thin HTTP layer. `address.py` calls `clients/juso_client.py` directly and returns
-  `Envelope[list[AddressCandidate]]` (a trivial single-call passthrough belongs in the router, not a service).
-  `building.py` takes `sigunguCd`/`bjdongCd`/`platGbCd`/`bun`/`ji` as query params (aliased from snake_case,
-  same CamelModel convention as everywhere else) and delegates to `services/building_service.py`. There is no
-  `coordinates.py` router — it existed briefly but was deleted once Geocoder turned out to be blocked from the
-  deployed server same as the other three VWorld APIs (see JSONP exception below); don't re-add it without
-  re-confirming Geocoder actually works from wherever this backend is deployed.
-- `services/building_service.py` — the one place with real orchestration logic: calls `building_client.get_title()`
-  then (if a building exists) `get_floors()`, and combines them via `schemas/building.py`'s `to_building_record()`.
-  This is the pattern for "service" — multi-client orchestration goes here, single-client passthroughs go
-  straight in the router.
-- `clients/` — one module per external API (`land_client.py`, `land_price_client.py`, `land_use_client.py`,
-  `juso_client.py`, `building_client.py`, `geocoder_client.py`), each doing the HTTP call + turning the raw
-  response into a Pydantic model. `clients/base.py` has the shared `httpx` `get_json()` helper (timeout +
-  error wrapping). Changing one API's shape should only ever touch its one client module. Four of these six
-  (`land_client.py`, `land_price_client.py`, `land_use_client.py`, `geocoder_client.py`) have **no router
-  calling them at all** — they're kept as working reference implementations for if/when the VWorld network
-  block gets resolved, not dead code to delete.
-- `schemas/` — Pydantic models. `schemas/common.py`'s `CamelModel` is the base for anything that crosses to
-  the frontend: fields are written snake_case in Python but serialize as camelCase, deliberately matching the
-  shape `frontend/src/data/normalize.js` produces for the VWorld-direct sections — `schemas/building.py`'s
-  `BuildingRecord` in particular is defined to come out byte-for-byte identical to what the frontend used to
-  hand-build in mocks, so the frontend needs zero transform step for it (see `api/backend.js` below).
-  `schemas/envelope.py`'s `Envelope[T]` (`{data, error}`) is the standard response wrapper for every endpoint.
-- `errors.py` — converts any external API failure into `ExternalAPIError` with a normalized `status_code` and
-  a canned Korean user-facing message (`user_message_for`); raw upstream error text is logged, never returned
-  to the client. `vworld_error()` maps VWorld's error-code vocabulary; `generic_error()` is for APIs
-  (juso.go.kr, data.go.kr) whose full error taxonomy isn't documented, treated as "not-success = error".
-- `config.py` — `pydantic-settings` reading `backend/.env` (`VWORLD_API_KEY`, `BUILDING_API_KEY`,
-  `JUSO_API_KEY`, `FRONTEND_ORIGIN`). VWorld's key is shared across 4 of the 6 external APIs; building and
-  juso each need their own separately-issued key from a different portal.
+See `backend/CLAUDE.md` — module-by-module conventions for `main.py`/`routers/`/`services/`/`clients/`/
+`schemas/`/`errors.py`/`config.py`.
 
 ### Frontend structure (`frontend/src/`)
-- `App.jsx` owns all state. `tabs` is an array of open parcels (the UI lets you keep several addresses open
-  as browser-like tabs); each tab independently tracks a `zone`/`land`/`bld`/`price` status
-  (`"loading" | "ok" | "empty" | "error"`) plus the normalized data for that section, updated via the local
-  `patch(id, partial)` helper. `loadLand`/`loadZone`/`loadPrice`/`loadBuilding` fire the real network calls per
-  tab and are reused by both the initial `select()` and each section's retry button. `candidates` (search
-  results) is its own piece of state now, populated by `runSearch()` calling `api/search.js`'s hybrid
-  `searchAddress()` — there is no static candidate list anymore.
-- `api/backend.js` calls the FastAPI backend (`searchAddress()`, `fetchBuilding()`); `api/vworld.js` +
-  `api/jsonp.js` call VWorld directly (see exception below) — `fetchLadfrl()`, `fetchLandUse()`,
-  `fetchLandPriceHistory()`, `fetchCoordinates()`, and (since 2026-07-31, planning.md 8-9) its own
-  `searchAddress()` for VWorld search 2.0. `App.jsx` never imports either `searchAddress` directly — it goes
-  through `api/search.js`, which calls both in parallel and merges by `pnu` (juso.go.kr's result wins when the
-  same parcel comes back from both; for VWorld-only parcels, `vworld.js`'s `refineParcelIdentifiers()`
-  re-derives the identifiers via Geocoder before they're used — see the exception section below for why).
-  `data/normalize.js` turns raw VWorld JSON
-  into the view-model each `*Section.jsx` expects — building doesn't need this step since the backend's
-  `BuildingRecord` already comes out in that shape (see `schemas/building.py` note above).
-  Coordinates (`tab.coords`, `{lat, lng}`) feed `components/ParcelMap.jsx` (Leaflet/`react-leaflet`, OpenStreetMap
-  tiles) in `PriceSection.jsx`; a failed geocode is swallowed silently (map falls back to a "확인 중" placeholder)
-  rather than shown as an error, since it's a secondary display, not one of the 4 report sections.
-- `components/*Section.jsx` are presentational, one per report section (`zone`/`land`/`bld`/`price`), matched
-  to the pill anchor-nav ids in `App.jsx`'s `SECTION_IDS`. Each one branches on `status` — make sure any new
-  status value handles `"empty"` explicitly (a section with no error and no data is a legitimate real-world
-  outcome, not just a placeholder for "still loading"); `ZoneSection.jsx` currently has no distinct `"empty"`
-  branch, which is a known gap, not an oversight to copy elsewhere.
+See `frontend/CLAUDE.md` — `App.jsx` state shape, the `api/` module split, and the `components/*Section.jsx`
+status-handling convention.
 
 ### The VWorld-direct-from-browser exception (important, read before touching land/zone/price/coordinates/search)
 Five VWorld APIs this app uses — 토지·임야정보 (`ladfrlList`), 개별공시지가 (`getIndvdLandPriceAttr`),
