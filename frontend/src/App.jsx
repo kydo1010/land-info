@@ -68,10 +68,16 @@ export default function App() {
   };
 
   // F-04 지도 좌표(Geocoder) — 선택된 주소 문자열을 그대로 넣어 얻는다(8-1 참조, PNU 불필요).
+  // cand.coords는 VWorld 검색 결과의 pnu를 Geocoder로 보정하는 과정(api/vworld.js의
+  // refineParcelIdentifiers, 8-10)에서 이미 얻어진 경우가 있어 — 있으면 재요청하지 않고 그대로 쓴다.
   // cand.addressType은 road/jibun 중 어느 쪽이 완전한 형태로 채워졌는지를 가리킨다(api/search.js 참조) —
   // 그쪽을 Geocoder의 type 파라미터와 함께 보내야 정확히 지오코딩된다.
   // 4종 섹션과 달리 지도 위 보조 표시일 뿐이라 별도 status는 두지 않고, 실패하면 조용히 "—"로 남긴다.
   const loadCoordinates = (id, cand) => {
+    if (cand.coords) {
+      patch(id, { coords: cand.coords });
+      return;
+    }
     const isRoad = cand.addressType !== "parcel";
     fetchCoordinates(isRoad ? cand.road : cand.jibun, isRoad ? "road" : "parcel")
       .then((coords) => patch(id, { coords }))

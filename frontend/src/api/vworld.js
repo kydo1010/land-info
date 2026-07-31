@@ -43,10 +43,10 @@ async function searchByCategory(query, category) {
   return response.result?.items || [];
 }
 
-// item.id는 문서상 "PNU"이지만 산여부 자리(11번째 자리)가 실제 값과 무관하게 항상 "1"로 내려오는
-// 결함이 실제 호출로 확인됐다(대지 필지 여러 건 재현, planning.md 8-9) — Geocoder의 level4LC도 같은
-// 결함을 공유해 대안이 못 된다. 그 자리를 신뢰하지 않고 항상 "0"(대지)으로 고정한다 — 실제 산지
-// 필지의 건축물대장 조회는 못 맞추지만, 산지엔 애초에 건물이 등록된 경우가 드물어 영향이 작다.
+// item.id는 문서상 "PNU"이지만 산여부 자리(11번째 자리)를 그대로 믿을 수 없다는 게 확인됐다(juso.go.kr이
+// 커버하는 대지 필지 여러 건에서 실제 값과 다르게 나옴 — planning.md 8-9). 일단 "0"(대지)으로 고정해두고,
+// juso.go.kr이 커버하지 못하는 주소에 한해 refineParcelIdentifiers()로 Geocoder의 level4LC를 통해
+// 다시 확인한다(8-10) — 이 함수 단계에서는 juso 매칭 여부를 모르므로 항상 0으로만 채워둔다.
 function toCandidate(item) {
   const id = item.id;
   const sigunguCd = id.slice(0, 5);
@@ -92,6 +92,46 @@ export async function searchAddress(query) {
   // 도로명주소 자체가 없는 필지는 category=parcel 결과의 road가 빈 문자열로 온다(예: "덕계동 91-5") —
   // road.replace(...)로 탭 제목을 만드는 App.jsx가 빈 문자열을 그대로 보여주지 않도록 jibun으로 채운다.
   return Array.from(byId.values()).map((c) => ({ ...c, road: c.road || c.jibun, jibun: c.jibun || c.road }));
+}
+
+// juso.go.kr이 놓친 주소(api/search.js에서 걸러진 것)에 한해, Geocoder(type=parcel)의
+// refined.structure.level4LC로 pnu를 다시 확인한다 — 실사용 중 "경상남도 양산시 덕계동 91-5" 사례로
+// level4LC가 실제 정확한 PNU임이 확인됐다(2026-07-31, planning.md 8-10 — 8-9에서 "항상 대지로 고정"했던
+// 걸 이걸로 보완). level4LC는 type=parcel로 질의할 때만 채워진다(type=road는 빈 문자열로 옴, 실제 확인) —
+// 그래서 jibun이 완전한 형태로 확보된 candidate(addressType === "parcel")에만 적용한다. jibun이 부분
+// 형태뿐인 candidate(addressType === "road")는 지오코딩 결과를 신뢰할 수 없어 8-9의 "0 고정"을 그대로 둔다.
+export async function refineParcelIdentifiers(candidate) {
+  if (candidate.addressType !== "parcel") return candidate;
+  try {
+    const data = await jsonp(GEOCODER_URL, {
+      service: "address",
+      request: "getCoord",
+      version: "2.0",
+      crs: "epsg:4326",
+      address: candidate.jibun,
+      type: "parcel",
+      key: KEY,
+      domain: DOMAIN,
+    });
+    const response = data.response || {};
+    if (response.status !== "OK") return candidate;
+    const level4LC = response.refined?.structure?.level4LC;
+    const point = response.result?.point;
+    const coords = point ? { lat: point.y, lng: point.x } : candidate.coords;
+    if (!level4LC || level4LC.length !== 19) return { ...candidate, coords };
+    return {
+      ...candidate,
+      pnu: level4LC,
+      sigunguCd: level4LC.slice(0, 5),
+      bjdongCd: level4LC.slice(5, 10),
+      platGbCd: level4LC.slice(10, 11),
+      bun: level4LC.slice(11, 15),
+      ji: level4LC.slice(15, 19),
+      coords,
+    };
+  } catch {
+    return candidate;
+  }
 }
 
 // 토지·임야정보 — https://api.vworld.kr/ned/data/ladfrlList

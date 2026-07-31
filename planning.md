@@ -381,6 +381,16 @@ VWorld의 통합검색 API 2.0(`https://api.vworld.kr/req/search`, 문서: `v4dv
 - `App.jsx`의 `loadCoordinates()`도 `cand.addressType`을 보고 완전한 쪽 필드(road 또는 jibun)와 그에 맞는 Geocoder `type` 파라미터를 골라 쓰도록 고쳤다 — 부분 형태 주소로 지오코딩하면 동명이인(동명이로) 지역으로 잘못 좌표가 찍힐 수 있어서다.
 - 백엔드는 변경하지 않았다 — `app/routers/address.py`·`clients/juso_client.py`는 여전히 정상 동작하고 하이브리드의 한 축으로 계속 쓰인다(제거 대상 아님).
 
+### 8-10. 산여부 "항상 0 고정"을 Geocoder의 level4LC 기반 재확인으로 교체 (2026-07-31)
+
+8-9에서 "juso가 놓친 주소는 산여부를 항상 0(대지)으로 고정한다"고 확정했으나, 이후 실사용 중 사용자가 "경상남도 양산시 덕계동 91-5"의 실제 PNU를 직접 확인한 결과 **`4833012000100910005`(산여부 자리 "1")가 정확한 값**임이 밝혀졌다 — 8-9에서 "항상 0"으로 밀어붙였다면 이 필지는 오답(`...000910005`)으로 저장될 뻔했다. 8-9 결론을 이걸로 정정한다.
+
+- 8-9에서 "Geocoder의 `level4LC`도 같은 결함을 공유해 대안이 못 된다"고 적었던 건, 그 결함을 juso.go.kr이 이미 정확하게 커버하는 **대지 필지들**(역삼동 737, 광령리 1234 등)로만 검증했기 때문이었다 — 하이브리드 구조에서 이 필지들은 juso 쪽이 우선이라 애초에 VWorld/Geocoder 파생값을 쓸 일이 없다. 정작 이 파생값이 실제로 쓰이는 대상(juso가 놓친 주소)에 대해서는 반증 사례가 없었고, 이번 "덕계동 91-5" 건이 그 대상에 대한 첫 실측 검증이자 **level4LC가 정확하다는 근거**가 됐다.
+- **적용 조건**: `level4LC`는 `type=parcel`로 질의할 때만 채워진다(`type=road`로 질의하면 빈 문자열로 옴 — 실제 확인, 8-1의 강남파이낸스센터 도로명 질의 응답 참조). 지번(`jibun`)이 완전한 형태로 확보된 candidate(`addressType === "parcel"`)에서만 이 보정을 적용할 수 있고, 도로명만 완전하고 지번은 부분 형태뿐인 candidate(`addressType === "road"`)는 신뢰할 만한 질의를 만들 수 없어 8-9의 "0 고정"을 그대로 유지한다.
+- **구현**: `frontend/src/api/vworld.js`에 `refineParcelIdentifiers(candidate)`를 추가 — `addressType === "parcel"`인 candidate에 한해 Geocoder(`type=parcel`, `address=candidate.jibun`)를 호출하고, `refined.structure.level4LC`(19자리)로 `pnu`/`sigunguCd`/`bjdongCd`/`platGbCd`/`bun`/`ji`를 다시 계산해 덮어쓴다. 이 호출로 얻은 좌표(`result.point`)도 `candidate.coords`에 같이 저장해둔다.
+- `frontend/src/api/search.js`는 juso 결과에 없는 VWorld candidate에 대해서만 `refineParcelIdentifiers()`를 돌린다(juso가 커버하는 건 이미 정확해서 불필요한 Geocoder 호출을 하지 않는다).
+- `App.jsx`의 `loadCoordinates()`는 `cand.coords`가 이미 있으면(위 보정 과정에서 얻어진 경우) Geocoder를 다시 호출하지 않고 그대로 쓰도록 고쳤다 — 같은 주소를 두 번 지오코딩하는 중복 호출을 피한다.
+
 ---
 
 ## 9. 백엔드 API 설계 (초안)

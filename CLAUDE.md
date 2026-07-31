@@ -105,8 +105,9 @@ the frontend calls *both* the backend (juso.go.kr) and VWorld search 2.0 directl
   `fetchLandPriceHistory()`, `fetchCoordinates()`, and (since 2026-07-31, planning.md 8-9) its own
   `searchAddress()` for VWorld search 2.0. `App.jsx` never imports either `searchAddress` directly — it goes
   through `api/search.js`, which calls both in parallel and merges by `pnu` (juso.go.kr's result wins when the
-  same parcel comes back from both, since only juso.go.kr's 산여부/mtYn bit is trustworthy — see the exception
-  section below for why). `data/normalize.js` turns raw VWorld JSON
+  same parcel comes back from both; for VWorld-only parcels, `vworld.js`'s `refineParcelIdentifiers()`
+  re-derives the identifiers via Geocoder before they're used — see the exception section below for why).
+  `data/normalize.js` turns raw VWorld JSON
   into the view-model each `*Section.jsx` expects — building doesn't need this step since the backend's
   `BuildingRecord` already comes out in that shape (see `schemas/building.py` note above).
   Coordinates (`tab.coords`, `{lat, lng}`) feed `components/ParcelMap.jsx` (Leaflet/`react-leaflet`, OpenStreetMap
@@ -154,14 +155,18 @@ Quirks specific to this JSONP path, all reproduced empirically (planning.md 8-5,
   `address.parcel` is the full 시/도-inclusive string but `address.road` is partial (no 시/군/구); a
   `category=road` result is the reverse — and a parcel with no assigned road name at all comes back with
   `address.road` as an empty string; `searchAddress()` falls back to `jibun` in that case so `road` is never
-  blank downstream. **Confirmed defect, don't trust it**: the response's
-  `item.id` — documented as "PNU" — has its 산여부/mtYn digit (11th digit) hard-coded to `"1"` regardless of
-  the parcel's real 대지/산 status (reproduced on 4 separate 대지 parcels; Geocoder's `refined.structure.level4LC`
-  shares the same bug, so it's not a workaround either — planning.md 8-9). Trusting it breaks 건축HUB lookups
-  for 대지 parcels (the majority) since `platGbCd` comes out wrong. This is exactly why address search stays
-  hybrid instead of switching outright to VWorld: `api/search.js` prefers juso.go.kr's real `mt_yn` when a
-  parcel is in both results, and only falls back to VWorld's `id` (forcing its mtYn digit to `"0"`) for
-  addresses juso.go.kr doesn't have.
+  blank downstream. **Don't trust the response's `item.id`** — documented as "PNU" but its 산여부/mtYn digit
+  (11th digit) doesn't reliably match reality for parcels juso.go.kr already covers (reproduced on 4 separate
+  대지 parcels there); trusting it breaks 건축HUB lookups for those since `platGbCd` comes out wrong. This is
+  exactly why address search stays hybrid instead of switching outright to VWorld: `api/search.js` prefers
+  juso.go.kr's real `mt_yn` whenever a parcel is in both results, and only falls back to VWorld for addresses
+  juso.go.kr doesn't have. For that VWorld-only fallback set, `refineParcelIdentifiers()` in `api/vworld.js`
+  re-derives `pnu`/`platGbCd`/etc. from Geocoder's `refined.structure.level4LC` (queried with `type=parcel`,
+  which is the only type that populates it) rather than trusting `item.id` — confirmed correct in the one
+  juso-uncovered parcel tested so far ("경상남도 양산시 덕계동 91-5", planning.md 8-10, which corrects 8-9's
+  earlier "always force mtYn to 0" call). This only works when `jibun` came through complete
+  (`addressType === "parcel"`) — a `addressType === "road"` candidate (partial `jibun`) can't be reliably
+  re-geocoded by parcel, so it keeps the mtYn-forced-to-`"0"` fallback from 8-9.
 - 개별공시지가 has TWO VWorld operations that look interchangeable but aren't: `getIndvdLandPrice` (identified
   by `ldCode`, a 법정동 only — cannot be narrowed to one parcel, returns every 지목×용도지역 record in that
   법정동) vs. `getIndvdLandPriceAttr` (identified by `pnu` — genuinely parcel-level, one record per year). This
