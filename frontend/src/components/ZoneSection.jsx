@@ -1,9 +1,15 @@
 import { useState } from "react";
 
 const TAG_STYLE = {
-  저촉: { bg: "#F6E7E0", fg: "#8E3B21" },
-  접함: { bg: "#EFEDE5", fg: "#6B665E" },
-  포함: { bg: "#E7EFEC", fg: "#1F4B43" },
+  저촉: { bg: "#d1e2ccff", fg: "#246c7bff" },
+  접함: { bg: "#d5ddecff", fg: "#3e4460ff" },
+  포함: { bg: "#edcdc4ff", fg: "#8E3B21" },
+};
+
+const TAG_DESC = {
+  포함: "토지 전체나 특정 구역이 해당 용도(지번 등) 안에 온전히 속해 있는 상태",
+  저촉: "토지의 일부가 계획선(도로선 등)에 침범되어 걸쳐 있는 상태. 건축이나 형질 변경 등 토지 이용에서 제한을 받음.",
+  접함: "대상 토지가 도시 계획선을 침범하지 않고 도로에 접해있는 상태. 건축법상 통행이나 허가에 유리함.",
 };
 
 const COLLAPSED_HEIGHT = 190;
@@ -17,6 +23,10 @@ export default function ZoneSection({ status, use, rules }) {
     const n = rules.filter((r) => r.kind === kind).length;
     return { kind, count: n + "건", color: n ? "#171614" : "#C9C3B6", ...TAG_STYLE[kind] };
   });
+  const byTag = ["포함", "저촉", "접함"].map((kind) => ({
+    kind,
+    items: rules.filter((r) => r.kind === kind).slice().sort((a, b) => a.name.localeCompare(b.name, "ko")),
+  }));
 
   return (
     <section id="zone" data-screen-label="토지이용계획" style={{ scrollMarginTop: 190 }}>
@@ -57,7 +67,7 @@ export default function ZoneSection({ status, use, rules }) {
                   listStyle: "disc",
                   display: "flex",
                   flexDirection: "column",
-                  gap: 6,
+                  gap: 14,
                   alignSelf: "center",
                 }}
               >
@@ -79,53 +89,83 @@ export default function ZoneSection({ status, use, rules }) {
                       </span>
                       <span style={{ color: k.color }}>{k.count}</span>
                     </span>
+                    <div style={{ fontSize: 11.5, color: "#A6A19A", marginTop: 4, lineHeight: 1.4 }}>
+                      {TAG_DESC[k.kind]}
+                    </div>
                   </li>
                 ))}
               </ul>
             </div>
             <div style={{ padding: "22px 26px 26px" }}>
-              <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em", marginBottom: 12 }}>
+              <div style={{ fontSize: 14, color: "#8C877E", letterSpacing: ".04em", marginBottom: 12 }}>
                 저촉·포함 규제 {rules.length}건
               </div>
               <div style={{ position: "relative" }}>
                 <div
                   style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 1,
-                    background: "#EDEAE2",
+                    display: "grid",
+                    gridTemplateColumns: "repeat(3, 1fr)",
+                    background: "#FFFFFF",
                     maxHeight: isCollapsed ? COLLAPSED_HEIGHT : 4000,
                     overflow: "hidden",
                     transition: "max-height .3s ease",
                   }}
                 >
-                  {rules.map((r) => (
+                  {byTag.map(({ kind, items }, idx) => (
                     <div
-                      key={r.no}
+                      key={kind}
                       style={{
-                        background: "#FFFFFF",
-                        padding: "12px 2px",
                         display: "flex",
-                        alignItems: "center",
-                        gap: 14,
+                        flexDirection: "column",
+                        borderRight: idx < 2 ? "1px solid #E5E1D8" : "none",
                       }}
                     >
-                      <span style={{ fontSize: 10.5, color: "#8C877E", width: 22 }}>{r.no}</span>
-                      <span
-                        style={{
-                          fontSize: 11.5,
-                          padding: "3px 9px",
-                          borderRadius: 999,
-                          background: TAG_STYLE[r.kind].bg,
-                          color: TAG_STYLE[r.kind].fg,
-                          width: 44,
-                          textAlign: "center",
-                          flex: "none",
-                        }}
-                      >
-                        {r.kind}
-                      </span>
-                      <span style={{ fontSize: 16, flex: 1, letterSpacing: "-.01em" }}>{r.name}</span>
+                      <div style={{ padding: "10px 14px", borderBottom: "1px solid #EDEAE2", display: "flex", justifyContent: "center" }}>
+                        <span
+                          style={{
+                            fontSize: 15, // 헤더 글자 크기
+                            fontWeight: 600,
+                            color: "#171614",
+                            padding: "3px 9px",
+                            width: 44,
+                            textAlign: "center",
+                          }}
+                        >
+                          {kind}
+                        </span>
+                      </div>
+                      {items.length ? (
+                        items.map((r, i) => (
+                          <div
+                            key={r.no}
+                            style={{
+                              padding: "12px 14px",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 10,
+                            }}
+                          >
+                            <span style={{ fontSize: 10.5, color: "#8C877E", width: 18, flex: "none" }}>{i + 1}</span>
+                            <span
+                              style={{
+                                fontSize: 11.5,
+                                padding: "3px 9px",
+                                borderRadius: 999,
+                                background: TAG_STYLE[r.kind].bg,
+                                color: TAG_STYLE[r.kind].fg,
+                                width: 44,
+                                textAlign: "center",
+                                flex: "none",
+                              }}
+                            >
+                              {r.kind}
+                            </span>
+                            <span style={{ fontSize: 15, flex: 1, letterSpacing: "-.01em" }}>{r.name}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ padding: "12px 14px", fontSize: 13.5, color: "#C9C3B6" }}>-</div>
+                      )}
                     </div>
                   ))}
                 </div>
