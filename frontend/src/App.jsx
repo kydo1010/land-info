@@ -8,6 +8,8 @@ import LandSection from "./components/LandSection.jsx";
 import BuildingSection from "./components/BuildingSection.jsx";
 import PriceSection from "./components/PriceSection.jsx";
 import { normalizeLand, normalizeZone, normalizePriceRows } from "./data/normalize.js";
+import { createTabState } from "./data/tab.js";
+import { saveTabs, loadTabs } from "./utils/tabStorage.js";
 import { buildChart, num } from "./utils/format.js";
 import { fetchLadfrl, fetchLandUse, fetchLandPriceHistory, fetchCoordinates } from "./api/vworld.js";
 import { fetchBuilding } from "./api/backend.js";
@@ -22,32 +24,6 @@ const SECTION_IDS = ["summary", "zone", "land", "bld", "price"];
 const LOAD_TIMEOUT_MS = 9000;
 const AUTOCOMPLETE_MIN_LEN = 2;
 const AUTOCOMPLETE_DEBOUNCE_MS = 300;
-// 새로고침해도 열려있던 탭(주소)이 그대로 남아있도록 후보 목록(cand)과 활성 탭만 localStorage에 저장한다
-// — 조회된 데이터(landInfo 등)는 저장하지 않고 새로고침 시 다시 불러온다(오래된 값이 남지 않게).
-const STORAGE_KEY = "parcel-report:tabs";
-
-function timestamp() {
-  const d = new Date();
-  const p = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}시 ${p(d.getMinutes())}분 ${p(d.getSeconds())}초`;
-}
-
-function newTabState(cand) {
-  return {
-    id: cand.pnu,
-    cand,
-    zone: "loading",
-    land: "loading",
-    bld: "loading",
-    price: "loading",
-    zoneInfo: null,
-    landInfo: null,
-    priceChart: null,
-    buildingInfo: null,
-    coords: null,
-    fetchedAt: timestamp(),
-  };
-}
 
 export default function App() {
   const [query, setQuery] = useState("");
@@ -146,7 +122,7 @@ export default function App() {
     const activeTab = tabs.find((t) => t.id === activeId);
     const isBlankActive = !!activeTab && activeTab.cand === null;
     if (!alreadyOpen) {
-      const tab = newTabState(c);
+      const tab = createTabState(c);
       // 새 탭(cand: null)에서 검색해 주소를 고른 경우 그 자리를 채우고, 그 외에는 탭을 새로 연다.
       setTabs((prev) => {
         if (prev.some((t) => t.id === id)) return prev;
@@ -168,15 +144,10 @@ export default function App() {
   // 새로고침 시 localStorage에 저장돼 있던 탭(주소 후보)들을 복원하고, 각 탭의 4종 데이터를 다시
   // 불러온다(저장해둔 옛 데이터를 쓰지 않고 새로 조회해서 최신 상태를 보여준다). 마운트 시 1회만 실행.
   useEffect(() => {
-    let saved;
-    try {
-      saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-    } catch {
-      saved = null;
-    }
-    if (!saved || !Array.isArray(saved.tabs) || saved.tabs.length === 0) return;
+    const saved = loadTabs();
+    if (!saved) return;
 
-    const restoredTabs = saved.tabs.map(newTabState);
+    const restoredTabs = saved.tabs.map(createTabState);
     setTabs(restoredTabs);
     const active = restoredTabs.find((t) => t.id === saved.activeId) || restoredTabs[0];
     setActiveId(active.id);
@@ -191,14 +162,9 @@ export default function App() {
     });
   }, []);
 
-  // tabs/activeId가 바뀔 때마다 저장 — 열린 탭이 하나도 없으면(전부 닫음) 저장값도 지운다.
+  // tabs/activeId가 바뀔 때마다 저장한다.
   useEffect(() => {
-    const realTabs = tabs.filter((t) => t.cand);
-    if (realTabs.length === 0) {
-      localStorage.removeItem(STORAGE_KEY);
-      return;
-    }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ tabs: realTabs.map((t) => t.cand), activeId }));
+    saveTabs(tabs, activeId);
   }, [tabs, activeId]);
 
   useEffect(() => {
