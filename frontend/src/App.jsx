@@ -13,9 +13,13 @@ import { fetchLadfrl, fetchLandUse, fetchLandPriceHistory, fetchCoordinates } fr
 import { fetchBuilding } from "./api/backend.js";
 import { searchAddress } from "./api/search.js";
 import { exportElementToPdf } from "./utils/exportPdf.js";
+import { withRetry } from "./utils/retry.js";
 
 const SECTION_IDS = ["summary", "zone", "land", "bld", "price"];
-const LOAD_TIMEOUT_MS = 5000;
+// VWorld 직접 호출의 JSONP 타임아웃(api/jsonp.js)과 백엔드 httpx 타임아웃(backend/app/clients/base.py)이
+// 둘 다 8000ms다 — 이보다 짧게 잡으면 실제로는 곧 성공할 응답(5~8초 사이 도착)을 이 타이머가 먼저
+// "에러"로 표시해버린다(재시도하면 되는 것처럼 보이는 원인이 바로 이거였음). 항상 그 값보다 길게 유지한다.
+const LOAD_TIMEOUT_MS = 9000;
 const AUTOCOMPLETE_MIN_LEN = 2;
 const AUTOCOMPLETE_DEBOUNCE_MS = 300;
 
@@ -48,7 +52,7 @@ export default function App() {
   // 오면 clearTimeout으로 이 타이머를 취소하고 정상 결과로 덮어쓴다.
   const loadLand = (id) => {
     const timer = setTimeout(() => patch(id, { land: "error" }), LOAD_TIMEOUT_MS);
-    fetchLadfrl(id)
+    withRetry(() => fetchLadfrl(id))
       .then((raw) => {
         clearTimeout(timer);
         patch(id, { land: raw ? "ok" : "empty", landInfo: normalizeLand(raw) });
@@ -61,7 +65,7 @@ export default function App() {
 
   const loadZone = (id) => {
     const timer = setTimeout(() => patch(id, { zone: "error" }), LOAD_TIMEOUT_MS);
-    fetchLandUse(id)
+    withRetry(() => fetchLandUse(id))
       .then((items) => {
         clearTimeout(timer);
         patch(id, { zone: items.length ? "ok" : "empty", zoneInfo: normalizeZone(items) });
@@ -77,7 +81,7 @@ export default function App() {
     const timer = setTimeout(() => patch(id, { price: "error" }), LOAD_TIMEOUT_MS);
     const thisYear = new Date().getFullYear();
     const years = Array.from({ length: 5 }, (_, i) => thisYear - 4 + i);
-    fetchLandPriceHistory(id)
+    withRetry(() => fetchLandPriceHistory(id))
       .then((records) => {
         clearTimeout(timer);
         const rows = normalizePriceRows(records, years);
@@ -94,7 +98,7 @@ export default function App() {
   // 원래 설계대로 백엔드(FastAPI)를 거친다(api/backend.js) — VWorld 3종과는 다른 경로.
   const loadBuilding = (id, cand) => {
     const timer = setTimeout(() => patch(id, { bld: "error" }), LOAD_TIMEOUT_MS);
-    fetchBuilding({ sigunguCd: cand.sigunguCd, bjdongCd: cand.bjdongCd, platGbCd: cand.platGbCd, bun: cand.bun, ji: cand.ji })
+    withRetry(() => fetchBuilding({ sigunguCd: cand.sigunguCd, bjdongCd: cand.bjdongCd, platGbCd: cand.platGbCd, bun: cand.bun, ji: cand.ji }))
       .then((record) => {
         clearTimeout(timer);
         patch(id, { bld: record.status, buildingInfo: record });
