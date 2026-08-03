@@ -75,6 +75,12 @@ input::placeholder {
 .btn-showmore:hover {
   background: #e3e2e0 !important;
 }
+.btn-pdf:hover {
+  background: #14302b !important;
+}
+.btn-print:hover {
+  border-color: #171614 !important;
+}
 .pill:hover {
   border-color: #1f4b43 !important;
   text-decoration: none !important;
@@ -98,4 +104,21 @@ input::placeholder {
 .search-input:focus {
   border-color: #1f4b43 !important;
   box-shadow: 0 0 0 3px rgba(31, 75, 67, 0.09);
+}
+
+/* 인쇄 시 헤더/검색창/탭 등은 숨기고 리포트 본문(#report-content)만 출력한다. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #report-content,
+  #report-content * {
+    visibility: visible;
+  }
+  #report-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
 }

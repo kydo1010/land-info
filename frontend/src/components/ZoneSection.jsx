@@ -15,12 +15,12 @@ const TAG_DESC = {
 
 const COLLAPSED_HEIGHT = 190;
 
-export default function ZoneSection({ status, use, rules, onRetry }) {
+export default function ZoneSection({ status, use, rules, onRetry, forceExpanded = false }) {
   const loading = status === "loading";
   const error = status === "error";
   const [expanded, setExpanded] = useState(false);
   const canCollapse = rules.length >= 5;
-  const isCollapsed = canCollapse && !expanded;
+  const isCollapsed = canCollapse && !expanded && !forceExpanded;
   const counts = ["포함", "저촉", "접함"].map((kind) => {
     const n = rules.filter((r) => r.kind === kind).length;
     return { kind, count: n + "건", color: n ? "#171614" : "#C9C3B6", ...TAG_STYLE[kind] };
@@ -105,7 +105,7 @@ export default function ZoneSection({ status, use, rules, onRetry }) {
                     background: "#FFFFFF",
                     maxHeight: isCollapsed ? COLLAPSED_HEIGHT : 4000,
                     overflow: "hidden",
-                    transition: "max-height .3s ease",
+                    transition: forceExpanded ? "none" : "max-height .3s ease",
                   }}
                 >
                   {byTag.map(({ kind, items }, idx) => (
@@ -180,7 +180,7 @@ export default function ZoneSection({ status, use, rules, onRetry }) {
                   />
                 )}
               </div>
-              {canCollapse && (
+              {canCollapse && !forceExpanded && (
                 <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
                   <button
                     onClick={() => setExpanded((v) => !v)}

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import Header from "./components/Header.jsx";
 import EmptyState from "./components/EmptyState.jsx";
 import SummarySection from "./components/SummarySection.jsx";
@@ -11,6 +12,7 @@ import { buildChart } from "./utils/format.js";
 import { fetchLadfrl, fetchLandUse, fetchLandPriceHistory, fetchCoordinates } from "./api/vworld.js";
 import { fetchBuilding } from "./api/backend.js";
 import { searchAddress } from "./api/search.js";
+import { exportElementToPdf } from "./utils/exportPdf.js";
 
 const SECTION_IDS = ["summary", "zone", "land", "bld", "price"];
 const LOAD_TIMEOUT_MS = 5000;
@@ -28,7 +30,9 @@ export default function App() {
   const [tabs, setTabs] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [activeSection, setActiveSection] = useState("summary");
+  const [expandAll, setExpandAll] = useState(false);
   const blankTabCounter = useRef(0);
+  const reportRef = useRef(null);
 
   const patch = (id, obj) => {
     setTabs((prev) => prev.map((t) => (t.id === id ? { ...t, ...obj } : t)));
@@ -159,6 +163,19 @@ export default function App() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // 인쇄(브라우저 Ctrl+P 포함) 직전/직후에 더보기로 접힌 목록(토지이용계획 규제, 층별개요)을
+  // 강제로 펼친다. flushSync로 동기 반영해야 브라우저의 인쇄 렌더링이 펼쳐진 상태를 그대로 캡처한다.
+  useEffect(() => {
+    const onBeforePrint = () => flushSync(() => setExpandAll(true));
+    const onAfterPrint = () => flushSync(() => setExpandAll(false));
+    window.addEventListener("beforeprint", onBeforePrint);
+    window.addEventListener("afterprint", onAfterPrint);
+    return () => {
+      window.removeEventListener("beforeprint", onBeforePrint);
+      window.removeEventListener("afterprint", onAfterPrint);
+    };
+  }, []);
+
   const closeTab = (id) => {
     const i = tabs.findIndex((t) => t.id === id);
     const next = tabs.filter((t) => t.id !== id);
@@ -224,6 +241,19 @@ export default function App() {
   const goTo = (id) => {
     const el = document.getElementById(id);
     if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 176, behavior: "smooth" });
+  };
+
+  const handlePrint = () => window.print();
+
+  // 더보기로 접힌 목록을 강제로 펼친 뒤(flushSync로 동기 반영) 리포트 DOM을 캔버스로 캡처해 PDF로 내려받는다.
+  const handleExportPdf = async () => {
+    if (!reportRef.current || !sel) return;
+    flushSync(() => setExpandAll(true));
+    try {
+      await exportElementToPdf(reportRef.current, `${sel.jibun.replace(/\s+/g, "_")}_필지종합조회.pdf`);
+    } finally {
+      setExpandAll(false);
+    }
   };
 
   const tab = tabs.find((t) => t.id === activeId) || null;
@@ -325,6 +355,8 @@ export default function App() {
         sel={sel ? { road: sel.road, jibun: sel.jibun, pnu: sel.pnu } : null}
         activeSection={activeSection}
         onGoTo={goTo}
+        onExportPdf={handleExportPdf}
+        onPrint={handlePrint}
       />
 
       {!sel && (
@@ -337,11 +369,30 @@ export default function App() {
       )}
 
       {sel && (
-        <div style={{ maxWidth: 1180, margin: "0 auto", padding: "48px 32px 0", display: "flex", flexDirection: "column", gap: 64 }}>
+        <div
+          id="report-content"
+          ref={reportRef}
+          style={{ maxWidth: 1180, margin: "0 auto", padding: "48px 32px 0", display: "flex", flexDirection: "column", gap: 64 }}
+        >
+          {/* 평소엔 헤더가 같은 정보를 보여주므로 숨겨서 중복을 피하고, PDF/인쇄 캡처 순간(expandAll)에만 렌더링해
+              헤더가 빠진 출력물에도 어느 필지 보고서인지 나오게 한다. */}
+          {expandAll && (
+            <div style={{ borderBottom: "1px solid #E5E1D8", paddingBottom: 20, display: "flex", alignItems: "flex-end", gap: 16, flexWrap: "wrap" }}>
+              <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-.025em" }}>{sel.road}</div>
+              <div style={{ fontSize: 14, color: "#6B665E" }}>{sel.jibun.replace("서울특별시 ", "")}</div>
+              <div style={{ marginLeft: "auto", fontSize: 12, color: "#8C877E" }}>PNU {sel.pnu}</div>
+            </div>
+          )}
           <SummarySection items={summaryItems} />
-          <ZoneSection status={st.zone} use={zone ? zone.use : ""} rules={zone ? zone.rules : []} onRetry={() => retry("zone")} />
+          <ZoneSection
+            status={st.zone}
+            use={zone ? zone.use : ""}
+            rules={zone ? zone.rules : []}
+            onRetry={() => retry("zone")}
+            forceExpanded={expandAll}
+          />
           <LandSection status={st.land} rows={landRows} onRetry={() => retry("land")} />
-          <BuildingSection status={st.bld} building={building} onRetry={() => retry("bld")} />
+          <BuildingSection status={st.bld} building={building} onRetry={() => retry("bld")} forceExpanded={expandAll} />
           <PriceSection
             status={st.price}
             selShort={sel.jibun.split(" ").slice(-2).join(" ")}

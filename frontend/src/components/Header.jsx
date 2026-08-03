@@ -22,6 +22,8 @@ export default function Header({
   sel,
   activeSection,
   onGoTo,
+  onExportPdf,
+  onPrint,
 }) {
   const hasTabs = tabs.length > 0;
 
@@ -306,6 +308,14 @@ export default function Header({
                 </a>
               );
             })}
+            <div style={{ display: "flex", gap: 8, marginLeft: "auto" }}>
+              <button onClick={onExportPdf} className="btn-pdf" style={btnPdfStyle}>
+                pdf 추출하기
+              </button>
+              <button onClick={onPrint} className="btn-print" style={btnPrintStyle}>
+                인쇄하기
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -334,6 +344,43 @@ const retryBtnStyle = {
   fontSize: 12.5,
   fontFamily: "inherit",
   borderRadius: 2,
+  cursor: "pointer",
+};
+
+// 두 버튼 폭을 동일하게 맞추기 위해 더 긴 라벨("pdf 추출하기")이 필요로 하는 값을 공용으로 사용한다.
+const actionBtnWidth = 136;
+
+const btnPdfStyle = {
+  width: actionBtnWidth,
+  padding: "8px 16px",
+  borderRadius: 0,
+  fontSize: 13.5,
+  fontWeight: 600,
+  fontFamily: "inherit",
+  letterSpacing: "-.01em",
+  border: "none",
+  background: "#1F4B43",
+  color: "#FBFAF7",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+};
+
+const btnPrintStyle = {
+  width: actionBtnWidth,
+  padding: "8px 16px",
+  borderRadius: 0,
+  fontSize: 13.5,
+  fontWeight: 500,
+  fontFamily: "inherit",
+  letterSpacing: "-.01em",
+  border: "1px solid #D8D3C8",
+  background: "#FFFFFF",
+  color: "#3D3A34",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
   cursor: "pointer",
 };
 

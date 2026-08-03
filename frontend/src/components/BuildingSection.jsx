@@ -25,7 +25,7 @@ function InfoGroup({ title, rows }) {
   );
 }
 
-export default function BuildingSection({ status, building, onRetry }) {
+export default function BuildingSection({ status, building, onRetry, forceExpanded = false }) {
   const loading = status === "loading";
   const empty = status === "empty";
   const error = status === "error";
@@ -33,7 +33,7 @@ export default function BuildingSection({ status, building, onRetry }) {
   const [floorsExpanded, setFloorsExpanded] = useState(false);
   const floors = b.floors || [];
   const canCollapseFloors = floors.length >= 5;
-  const isFloorsCollapsed = canCollapseFloors && !floorsExpanded;
+  const isFloorsCollapsed = canCollapseFloors && !floorsExpanded && !forceExpanded;
 
   return (
     <section id="bld" data-screen-label="건축물대장" style={{ scrollMarginTop: 190 }}>
@@ -146,7 +146,7 @@ export default function BuildingSection({ status, building, onRetry }) {
                     style={{
                       maxHeight: isFloorsCollapsed ? FLOORS_COLLAPSED_HEIGHT : 4000,
                       overflow: "hidden",
-                      transition: "max-height .3s ease",
+                      transition: forceExpanded ? "none" : "max-height .3s ease",
                     }}
                   >
                     {floors.map((f, i) => (
@@ -185,7 +185,7 @@ export default function BuildingSection({ status, building, onRetry }) {
                     />
                   )}
                 </div>
-                {canCollapseFloors && (
+                {canCollapseFloors && !forceExpanded && (
                   <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
                     <button
                       onClick={() => setFloorsExpanded((v) => !v)}
