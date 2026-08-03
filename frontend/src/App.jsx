@@ -355,11 +355,14 @@ export default function App() {
 
   const buildingSummaryItem = {
     label: "건축물대장",
-    value: st.bld === "ok" ? building.purpose : st.bld === "empty" ? "건축물 없음" : dash,
-    sub: st.bld === "ok" ? building.floorSummary.split(" · ")[0] : st.bld === "empty" ? "나지" : "조회 중",
-    ready: st.bld === "ok" || st.bld === "empty",
+    // status가 "ok"면 SummarySection이 building 필드로 4열 표(주구조/주용도/건축 규모/건폐율·용적률)를
+    // 대신 그리므로 value/sub/ready는 loading·empty·error 상태의 대체 타일에서만 쓰인다.
+    value: st.bld === "empty" ? "건축물 없음" : dash,
+    sub: st.bld === "empty" ? "나지" : "조회 중",
+    ready: st.bld === "empty",
     status: st.bld,
     onRetry: () => retry("bld"),
+    building: st.bld === "ok" ? building : null,
   };
 
   const landRows = land

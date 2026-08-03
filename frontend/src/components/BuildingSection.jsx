@@ -57,13 +57,13 @@ export default function BuildingSection({ status, building, onRetry, forceExpand
                 <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: "-.02em", marginTop: 8 }}>{b.purpose}</div>
               </div>
               <div style={{ padding: "24px 26px", borderRight: "1px solid #EDEAE2" }}>
-                <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em" }}>면적</div>
+                <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em" }}>건축 규모</div>
                 <ul style={{ margin: "8px 0 0", padding: "0 0 0 18px", listStyle: "disc", display: "flex", flexDirection: "column", gap: 6 }}>
                   <li style={{ fontSize: 14, color: "#6B665E" }}>
-                    대지 <span style={{ fontSize: 15.5, color: "#171614", fontWeight: 600 }}>{b.siteArea}</span>
+                    연면적 <span style={{ fontSize: 15.5, color: "#171614", fontWeight: 600 }}>{b.totalFloorArea || "—"}</span>
                   </li>
                   <li style={{ fontSize: 14, color: "#6B665E" }}>
-                    건축 <span style={{ fontSize: 15.5, color: "#171614", fontWeight: 600 }}>{b.buildArea}</span>
+                    층수 <span style={{ fontSize: 15.5, color: "#171614", fontWeight: 600 }}>{b.floorRange || "—"}</span>
                   </li>
                 </ul>
               </div>
@@ -96,6 +96,8 @@ export default function BuildingSection({ status, building, onRetry, forceExpand
             <InfoGroup
               title=<h3 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: "-.02em", color: "#777777" }}>면적 및 구조 정보</h3>
               rows={[
+                ["대지면적", b.siteArea],
+                ["건축면적", b.buildArea],
                 ["용적률 산정용 연면적", b.vlRatArea],
                 ["지역", b.zoningRegion],
                 ["지구", b.zoningDistrict],

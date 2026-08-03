@@ -155,8 +155,8 @@ class BuildingRecord(CamelModel):
     status: str  # "ok" | "empty"
     struct: str | None = None
     purpose: str | None = None
-    site_area: str | None = None
-    build_area: str | None = None
+    total_floor_area: str | None = None  # 연면적 — 층별개요 각 층 면적의 합(표제부 tot_area가 아님, 여러 동 대응).
+    floor_range: str | None = None  # 예: "지하 2층 / 지상 5층" (지하 없으면 "지상 1층 / 지상 5층") — 층별개요 전체 기준.
     bcr: str | None = None
     far: str | None = None
     approved: str | None = None
@@ -173,6 +173,8 @@ class BuildingRecord(CamelModel):
     zoning_region: str | None = None
     zoning_district: str | None = None
     zoning_area: str | None = None
+    site_area: str | None = None  # 대지면적(표제부 plat_area) — "면적 및 구조 정보"에 표시.
+    build_area: str | None = None  # 건축면적(표제부 arch_area) — "면적 및 구조 정보"에 표시.
     vl_rat_area: str | None = None
     height: str | None = None
     roof: str | None = None
@@ -229,6 +231,22 @@ def _floor_sort_key(f: BrFlrOulnItem) -> tuple[str, str, int]:
     return (f.bld_nm, f.dong_nm, signed_floor)
 
 
+def _floor_area_total(floors: list[BrFlrOulnItem]) -> float:
+    """연면적 = 층별개요 각 층 면적의 합 — 여러 동(건물)이 있으면 표제부(title.tot_area)는 그중 한
+    동만 반영하지만(_fetch_one이 items[0]만 취함), 층별개요는 전체 동을 다 내려주므로 이걸 더한다."""
+    return sum(f.area for f in floors)
+
+
+def _floor_range(floors: list[BrFlrOulnItem]) -> str | None:
+    """건물이 여러 개(동)여도 전체 층별개요를 통틀어 가장 낮은/높은 층을 구한다."""
+    ground = [f.flr_no for f in floors if f.flr_gb_cd_nm == "지상"]
+    basement = [f.flr_no for f in floors if f.flr_gb_cd_nm == "지하"]
+    if not ground:
+        return None
+    low = f"지하 {max(basement)}층" if basement else f"지상 {min(ground)}층"
+    return f"{low} / 지상 {max(ground)}층"
+
+
 def empty_building_record() -> BuildingRecord:
     return BuildingRecord(status="empty")
 
@@ -267,8 +285,8 @@ def to_building_record(
         status="ok",
         struct=title.strct_cd_nm,
         purpose=title.main_purps_cd_nm,
-        site_area=_fmt_area(title.plat_area),
-        build_area=_fmt_area(title.arch_area),
+        total_floor_area=_fmt_area(_floor_area_total(floors)) if floors else None,
+        floor_range=_floor_range(floors),
         bcr=f"{title.bc_rat:,.2f}%",
         far=f"{title.vl_rat:,.2f}%",
         approved=_fmt_date(title.use_apr_day),
@@ -295,6 +313,8 @@ def to_building_record(
         zoning_region=_fmt_text(basis.jiyuk_cd_nm) if basis else "-",
         zoning_district=_fmt_text(basis.jigu_cd_nm) if basis else "-",
         zoning_area=_fmt_text(basis.guyuk_cd_nm) if basis else "-",
+        site_area=_fmt_area(title.plat_area),
+        build_area=_fmt_area(title.arch_area),
         vl_rat_area=_fmt_area(title.vl_rat_estm_tot_area),
         height=f"{title.heit:,.2f}m" if title.heit else "-",
         roof=_fmt_text(title.roof_cd_nm),
