@@ -25,7 +25,7 @@ export default function PriceSection({ status, selShort, coords, chart, onRetry 
       >
         <div style={{ borderRight: "1px solid #EDEAE2", padding: 20 }}>
           <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em", marginBottom: 12 }}>위치</div>
-          <div style={{ height: 300, border: "1px solid #E5E1D8", overflow: "hidden" }}>
+          <div style={{ height: 300, border: "1px solid #E5E1D8", overflow: "hidden", position: "relative", zIndex: 0 }}>
             {coords ? (
               <ParcelMap lat={coords.lat} lng={coords.lng} label={selShort} />
             ) : (
