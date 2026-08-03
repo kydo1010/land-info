@@ -11,7 +11,7 @@ import { useReportExport } from "./hooks/useReportExport.js";
 import { useTabs } from "./hooks/useTabs.js";
 import { buildTabItems, computeLandPrice, buildSummaryItems, buildBuildingSummaryItem, buildLandRows } from "./data/summaryViewModel.js";
 
-const SECTION_IDS = ["summary", "zone", "land", "bld", "price"];
+const SECTION_IDS = ["summary", "price", "zone", "land", "bld"];
 
 export default function App() {
   const { query, setQuery, search, setSearch, candidates, runSearch, handleQueryChange } = useAddressSearch();
@@ -103,15 +103,6 @@ export default function App() {
             </div>
           )}
           <SummarySection items={summaryItems} buildingItem={buildingSummaryItem} />
-          <ZoneSection
-            status={st.zone}
-            use={zone ? zone.use : ""}
-            rules={zone ? zone.rules : []}
-            onRetry={() => retry("zone")}
-            forceExpanded={expandAll}
-          />
-          <LandSection status={st.land} rows={landRows} onRetry={() => retry("land")} />
-          <BuildingSection status={st.bld} building={building} onRetry={() => retry("bld")} forceExpanded={expandAll} />
           <PriceSection
             status={st.price}
             selShort={sel.jibun.split(" ").slice(-2).join(" ")}
@@ -121,6 +112,15 @@ export default function App() {
             landPriceRows={landPriceRows}
             onRetry={() => retry("price")}
           />
+          <ZoneSection
+            status={st.zone}
+            use={zone ? zone.use : ""}
+            rules={zone ? zone.rules : []}
+            onRetry={() => retry("zone")}
+            forceExpanded={expandAll}
+          />
+          <LandSection status={st.land} rows={landRows} onRetry={() => retry("land")} />
+          <BuildingSection status={st.bld} building={building} onRetry={() => retry("bld")} forceExpanded={expandAll} />
 
           <div style={{ borderTop: "1px solid #E5E1D8", paddingTop: 18, display: "flex", justifyContent: "space-between", fontSize: 11.5, color: "#A6A19A" }}>
             <div>조회 시각 {tab ? tab.fetchedAt : ""}</div>

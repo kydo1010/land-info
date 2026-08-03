@@ -9,7 +9,7 @@ export default function PriceSection({ status, selShort, coords, chart, landPric
   return (
     <section id="price" data-screen-label="토지 개별공시지가 트래커" style={{ scrollMarginTop: 190 }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 14 }}>
-        <div style={{ fontSize: 11, color: "#1F4B43", letterSpacing: ".1em" }}>04</div>
+        <div style={{ fontSize: 11, color: "#1F4B43", letterSpacing: ".1em" }}>01</div>
         <h2 style={{ margin: 0, fontSize: 25, fontWeight: 700, letterSpacing: "-.025em" }}>토지 개별공시지가 트래커</h2>
         <div style={{ fontSize: 14, color: "#8C877E" }}>국토교통부 · 토지 개별공시지가 (최근 5개년)</div>
       </div>

@@ -38,7 +38,7 @@ export default function BuildingSection({ status, building, onRetry, forceExpand
   return (
     <section id="bld" data-screen-label="건축물대장" style={{ scrollMarginTop: 190 }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 14 }}>
-        <div style={{ fontSize: 11, color: "#1F4B43", letterSpacing: ".1em" }}>03</div>
+        <div style={{ fontSize: 11, color: "#1F4B43", letterSpacing: ".1em" }}>04</div>
         <h2 style={{ margin: 0, fontSize: 25, fontWeight: 700, letterSpacing: "-.025em" }}>건축물대장</h2>
         <div style={{ fontSize: 14, color: "#8C877E" }}>국토교통부 · 건축물대장 표제부 / 층별개요</div>
       </div>

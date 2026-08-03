@@ -33,7 +33,7 @@ export default function ZoneSection({ status, use, rules, onRetry, forceExpanded
   return (
     <section id="zone" data-screen-label="토지이용계획" style={{ scrollMarginTop: 190 }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 14 }}>
-        <div style={{ fontSize: 11, color: "#1F4B43", letterSpacing: ".1em" }}>01</div>
+        <div style={{ fontSize: 11, color: "#1F4B43", letterSpacing: ".1em" }}>02</div>
         <h2 style={{ margin: 0, fontSize: 25, fontWeight: 700, letterSpacing: "-.025em" }}>토지이용계획</h2>
         <div style={{ fontSize: 14, color: "#8C877E" }}>국토교통부 / 토지이용규제정보서비스</div>
       </div>

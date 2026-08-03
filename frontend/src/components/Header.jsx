@@ -2,10 +2,10 @@ import { LoadingBlock } from "./StatusBlocks.jsx";
 
 const SECTIONS = [
   { id: "summary", label: "요약" },
+  { id: "price", label: "토지 개별공시지가" },
   { id: "zone", label: "토지이용계획" },
   { id: "land", label: "토지대장" },
   { id: "bld", label: "건축물대장" },
-  { id: "price", label: "토지 개별공시지가" },
 ];
 
 export default function Header({
