@@ -113,6 +113,7 @@ export default function BuildingSection({ status, building, onRetry, forceExpand
                 <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: "-.02em", color: "#777777" }}>사용승인일</h3>
                 <div style={{ fontSize: 16 }}>{b.approved}</div>
               </div>
+              <br />
               <div>
                 <div
                   style={{

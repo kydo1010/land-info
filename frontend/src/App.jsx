@@ -349,7 +349,14 @@ export default function App() {
       ready: st.price === "ok" || st.price === "empty",
       status: st.price,
       onRetry: () => retry("price"),
-      extra: st.price === "ok" ? { label: "토지 공시가격", value: landPriceLatest } : null,
+    },
+    {
+      label: "토지 공시가격",
+      value: st.price === "ok" ? landPriceLatest : st.price === "empty" ? "정보 없음" : dash,
+      sub: st.price === "ok" ? `${chart.priceLatestYear} 기준` : st.price === "empty" ? "등록된 이력 없음" : "조회 중",
+      ready: st.price === "ok" || st.price === "empty",
+      status: st.price,
+      onRetry: () => retry("price"),
     },
   ];
 
@@ -420,10 +427,12 @@ export default function App() {
           {/* 평소엔 헤더가 같은 정보를 보여주므로 숨겨서 중복을 피하고, PDF/인쇄 캡처 순간(expandAll)에만 렌더링해
               헤더가 빠진 출력물에도 어느 필지 보고서인지 나오게 한다. */}
           {expandAll && (
-            <div style={{ borderBottom: "1px solid #E5E1D8", paddingBottom: 20, display: "flex", alignItems: "flex-end", gap: 16, flexWrap: "wrap" }}>
-              <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-.025em" }}>{sel.road}</div>
-              <div style={{ fontSize: 14, color: "#6B665E" }}>{sel.jibun.replace("서울특별시 ", "")}</div>
-              <div style={{ marginLeft: "auto", fontSize: 12, color: "#8C877E" }}>PNU {sel.pnu}</div>
+            <div style={{ borderBottom: "1px solid #E5E1D8", paddingBottom: 20 }}>
+              <div style={{ fontSize: 35, fontWeight: 700, letterSpacing: "-.025em" }}>{sel.road}</div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: 8 }}>
+                <div style={{ fontSize: 20, color: "#6B665E" }}>{sel.jibun}</div>
+                <div style={{ fontSize: 15, color: "#8C877E" }}>PNU {sel.pnu}</div>
+              </div>
             </div>
           )}
           <SummarySection items={summaryItems} buildingItem={buildingSummaryItem} />

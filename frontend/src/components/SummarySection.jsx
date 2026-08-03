@@ -1,8 +1,12 @@
 import { LoadingBlock, ErrorBlock } from "./StatusBlocks.jsx";
 
+// 요약의 첫 번째 행(4열 값 타일)과 두 번째 행(건축물대장 4열)이 서로 다른 내용 구조를 갖고 있어도 같은 높이로 보이도록 두 행 모두 이 값을 minHeight로 준다 — 둘 중 더 큰 쪽(건축 규모/건폐율·용적률처럼
+// 불릿 2줄이 들어가는 칸)에 맞춘 값이다.
+const TILE_MIN_HEIGHT = 124;
+
 function SummaryTile({ s, borderRight }) {
   return (
-    <div style={{ padding: "24px 26px", borderRight: borderRight ? "1px solid #EDEAE2" : "none" }}>
+    <div style={{ padding: "24px 26px", minHeight: TILE_MIN_HEIGHT, borderRight: borderRight ? "1px solid #EDEAE2" : "none" }}>
       <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em" }}>{s.label}</div>
       {s.status === "loading" ? (
         <LoadingBlock height={56} compact showText={false} />
@@ -36,40 +40,56 @@ function SummaryTile({ s, borderRight }) {
           >
             {s.sub}
           </div>
-          {s.extra && (
-            <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid #F1EEE7" }}>
-              <div style={{ fontSize: 11.5, color: "#8C877E" }}>{s.extra.label}</div>
-              <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-.02em", marginTop: 3, color: "#171614" }}>{s.extra.value}</div>
-            </div>
-          )}
         </>
       )}
     </div>
   );
 }
 
-// 건축물대장 데이터가 있을 때(status === "ok")만 쓰는 4열 표 — 건축물대장 섹션 상단 행과 같은 항목
-// (주구조/주용도/건축 규모/건폐율·용적률)을, 위 3열 요약 타일과 같은 느낌(라벨-값-보조값)으로 보여준다.
+// 건축물대장 데이터가 있을 때(status === "ok")만 쓰는 4열 표 — BuildingSection.jsx 상단 행과
+// 완전히 같은 UI(라벨 + 단일 값, 또는 라벨 + 불릿 2줄)를 그대로 재사용한다. 연면적/층수, 건폐율/용적률은
+// 각 쌍 안에서 굵기·크기가 서로 동일해야 하므로(둘 중 하나만 강조하지 않음) 불릿 li 스타일을 통일한다.
 function BuildingSummaryRow({ s }) {
   const b = s.building;
+  const cellStyle = (borderRight) => ({ padding: "24px 26px", minHeight: TILE_MIN_HEIGHT, borderRight: borderRight ? "1px solid #EDEAE2" : "none" });
+  const ulStyle = { margin: "8px 0 0", padding: "0 0 0 18px", listStyle: "disc", display: "flex", flexDirection: "column", gap: 6 };
+  const liLabelStyle = { fontSize: 14, color: "#6B665E" };
+  const liValueStyle = { fontSize: 15.5, color: "#171614", fontWeight: 600 };
   const dash = "—";
-  const cols = [
-    { label: "주구조", value: b.struct || dash, sub: null },
-    { label: "주용도", value: b.purpose || dash, sub: null },
-    { label: "건축 규모", value: b.totalFloorArea || dash, sub: b.floorRange || dash },
-    { label: "건폐율 · 용적률", value: b.bcr || dash, sub: b.far ? `용적률 ${b.far}` : dash },
-  ];
+
   return (
     <div>
-      <div style={{ padding: "24px 26px 4px", fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em" }}>{s.label}</div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)" }}>
-        {cols.map((c, i) => (
-          <div key={c.label} style={{ padding: "8px 26px 24px", borderRight: i < cols.length - 1 ? "1px solid #EDEAE2" : "none" }}>
-            <div style={{ fontSize: 11.5, color: "#8C877E" }}>{c.label}</div>
-            <div style={{ fontSize: 20, fontWeight: 600, letterSpacing: "-.02em", marginTop: 6, color: "#171614" }}>{c.value}</div>
-            {c.sub && <div style={{ fontSize: 13, color: "#A6A19A", marginTop: 5 }}>{c.sub}</div>}
-          </div>
-        ))}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
+        <div style={cellStyle(true)}>
+          <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em" }}>건축물 주구조</div>
+          <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: "-.02em", marginTop: 8 }}>{b.struct || dash}</div>
+        </div>
+        <div style={cellStyle(true)}>
+          <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em" }}>건축물 주용도</div>
+          <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: "-.02em", marginTop: 8 }}>{b.purpose || dash}</div>
+        </div>
+        <div style={cellStyle(true)}>
+          <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em" }}>건축 규모</div>
+          <ul style={ulStyle}>
+            <li style={liLabelStyle}>
+              연면적 <span style={liValueStyle}>{b.totalFloorArea || dash}</span>
+            </li>
+            <li style={liLabelStyle}>
+              층수 <span style={liValueStyle}>{b.floorRange || dash}</span>
+            </li>
+          </ul>
+        </div>
+        <div style={cellStyle(false)}>
+          <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em" }}>건폐율 · 용적률</div>
+          <ul style={ulStyle}>
+            <li style={liLabelStyle}>
+              건폐 <span style={liValueStyle}>{b.bcr || dash}</span>
+            </li>
+            <li style={liLabelStyle}>
+              용적 <span style={liValueStyle}>{b.far || dash}</span>
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
   );
@@ -84,7 +104,7 @@ export default function SummarySection({ items, buildingItem }) {
         <div style={{ fontSize: 14, color: "#8C877E" }}>4개 대장의 핵심 항목</div>
       </div>
       <div style={{ border: "1px solid #E5E1D8", borderRadius: 3, background: "#FFFFFF" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", borderBottom: "1px solid #E5E1D8" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", borderBottom: "1px solid #E5E1D8" }}>
           {items.map((s, i) => (
             <SummaryTile key={s.label} s={s} borderRight={i < items.length - 1} />
           ))}

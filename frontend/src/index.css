@@ -106,7 +106,9 @@ input::placeholder {
   box-shadow: 0 0 0 3px rgba(31, 75, 67, 0.09);
 }
 
-/* 인쇄 시 헤더/검색창/탭 등은 숨기고 리포트 본문(#report-content)만 출력한다. */
+/* 인쇄 시 헤더/검색창/탭 등은 숨기고 리포트 본문(#report-content)만 출력한다.
+   @page 여백은 여기 하드코딩하지 않는다 — main.jsx가 utils/printMargins.js의 값으로 런타임에
+   주입한다(PDF 추출 쪽과 같은 값을 쓰게 하기 위함, 자세한 이유는 printMargins.js 참조). */
 @media print {
   body * {
     visibility: hidden;
@@ -120,5 +122,8 @@ input::placeholder {
     left: 0;
     top: 0;
     width: 100%;
+    /* 화면용 padding(App.jsx의 인라인 style, sticky 헤더 아래 여백 확보용)이 인쇄에서는
+       @page 여백과 중첩돼 1페이지 상단만 유독 넓어 보인다 — 인쇄에서는 @page 여백만 쓰도록 0으로 덮는다. */
+    padding: 0 !important;
   }
 }

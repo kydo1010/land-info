@@ -280,7 +280,7 @@ export default function Header({
               </div>
             </div>
             <div style={{ fontSize: 13, color: "#6B665E", paddingBottom: 4 }}>
-              {sel.jibun.replace("서울특별시 ", "")}
+              {sel.jibun}
             </div>
             <div style={{ marginLeft: "auto", fontSize: 11.5, color: "#8C877E", paddingBottom: 5 }}>
               PNU {sel.pnu}
