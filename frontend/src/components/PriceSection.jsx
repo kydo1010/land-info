@@ -27,7 +27,9 @@ export default function PriceSection({ status, selShort, coords, chart, landPric
           <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em", marginBottom: 12 }}>위치</div>
           <div style={{ height: 300, border: "1px solid #E5E1D8", overflow: "hidden", position: "relative", zIndex: 0 }}>
             {coords ? (
-              <ParcelMap lat={coords.lat} lng={coords.lng} label={selShort} />
+              // 좌표(=필지)가 바뀌면 ParcelMap을 완전히 새로 마운트해서 이전 필지의 로딩/재시도
+              // 상태(예: 에러로 멈춘 상태)가 새 필지에 그대로 남지 않게 한다.
+              <ParcelMap key={`${coords.lat},${coords.lng}`} lat={coords.lat} lng={coords.lng} label={selShort} />
             ) : (
               <div
                 style={{
