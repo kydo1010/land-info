@@ -20,7 +20,6 @@ npm run dev       # Vite dev server
 npm run build     # production build (also the fastest way to typo-check JSX)
 npm run preview
 ```
-No test runner or linter is configured in this project yet.
 
 ### Backend (`backend/`)
 Dependency management is via `uv` (`uv.lock`, `.python-version` present).
@@ -35,22 +34,12 @@ Only `/api/address/search` and `/api/building` are wired up (see Architecture be
 four of those instead (see the JSONP exception below). Don't add a router for any VWorld-backed endpoint
 without first checking whether that's still true.
 
-### `backend/api-sample/`
-Standalone, throwaway scripts (not imported by `app/`) for poking a real external API directly with plain
-`urllib` — used to verify request/response shapes before writing real client code, and to reproduce
-prod-only failures locally. Run from `backend/`:
-```
-python3 api-sample/land-list.py
-python3 api-sample/address-search.py
-```
-All of them load secrets via `api-sample/_common.py`'s `load_env_key(name)`, which reads `backend/.env`
-directly — never print or copy API key values out of `.env`; add new keys to `.env`/`.env.example` by name only.
+See `backend/api-sample/CLAUDE.md` for the throwaway API-probing scripts in that directory.
 
 ## Architecture
 
 ### Two apps, split by which one calls which external API
-`frontend/` (React 18 + Vite, plain JS/JSX — no TypeScript, no CSS framework, inline styles) and `backend/`
-(FastAPI) are separate projects. Every report section now hits a real external API — there is no mock data
+`frontend/` and `backend/` are separate projects. Every report section now hits a real external API — there is no mock data
 left anywhere in this codebase — but *which* layer makes the call differs per section (see the JSONP
 exception below): 토지대장/토지이용계획/공시지가/지도 좌표 go straight from the browser to VWorld; 건축물대장
 goes through the backend as originally designed. 주소 검색 is a hybrid since 2026-07-31 (planning.md 8-9):
@@ -146,6 +135,5 @@ scratch beyond that. Not yet empirically confirmed: whether 필지구분 `2` gen
 real parcel tested so far only had data under `1`.
 
 ## Environment files
-Both `backend/.env` and `frontend/.env` are gitignored; `.env.example` in each directory is the template.
 `frontend/.env`'s `VITE_`-prefixed values are inlined into the built JS bundle and visible to any visitor —
 that's expected/accepted for `VITE_VWORLD_API_KEY` given the domain-lock behavior above, not a bug to fix.
