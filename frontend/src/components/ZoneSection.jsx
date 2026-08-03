@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { LoadingBlock, ErrorBlock } from "./StatusBlocks.jsx";
 
 const TAG_STYLE = {
   저촉: { bg: "#d1e2ccff", fg: "#246c7bff" },
@@ -14,8 +15,9 @@ const TAG_DESC = {
 
 const COLLAPSED_HEIGHT = 190;
 
-export default function ZoneSection({ status, use, rules }) {
+export default function ZoneSection({ status, use, rules, onRetry }) {
   const loading = status === "loading";
+  const error = status === "error";
   const [expanded, setExpanded] = useState(false);
   const canCollapse = rules.length >= 5;
   const isCollapsed = canCollapse && !expanded;
@@ -37,14 +39,9 @@ export default function ZoneSection({ status, use, rules }) {
       </div>
       <div style={{ background: "#FFFFFF", border: "1px solid #E5E1D8", borderRadius: 3 }}>
         {loading ? (
-          <div style={{ padding: 26, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 22 }}>
-            {[1, 2, 3].map((k) => (
-              <div key={k} className="shimmer">
-                <div style={{ height: 10, width: 54, background: "#EDEAE2" }} />
-                <div style={{ height: 20, width: "74%", background: "#E7E3DA", marginTop: 12 }} />
-              </div>
-            ))}
-          </div>
+          <LoadingBlock height={180} />
+        ) : error ? (
+          <ErrorBlock onRetry={onRetry} height={180} />
         ) : (
           <div>
             <div

@@ -1,3 +1,5 @@
+import { LoadingBlock, ErrorBlock } from "./StatusBlocks.jsx";
+
 export default function LandSection({ status, rows, onRetry }) {
   const loading = status === "loading";
   const empty = status === "empty";
@@ -11,16 +13,7 @@ export default function LandSection({ status, rows, onRetry }) {
         <div style={{ fontSize: 14, color: "#8C877E" }}>국토교통부 · 토지대장 정보</div>
       </div>
       <div style={{ background: "#FFFFFF", border: "1px solid #E5E1D8", borderRadius: 3 }}>
-        {loading && (
-          <div style={{ padding: 26, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 22 }}>
-            {[1, 2, 3].map((k) => (
-              <div key={k} className="shimmer">
-                <div style={{ height: 10, width: 48, background: "#EDEAE2" }} />
-                <div style={{ height: 20, width: "70%", background: "#E7E3DA", marginTop: 12 }} />
-              </div>
-            ))}
-          </div>
-        )}
+        {loading && <LoadingBlock height={180} />}
         {status === "ok" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)" }}>
             {rows.map((l) => (
@@ -40,25 +33,8 @@ export default function LandSection({ status, rows, onRetry }) {
           </div>
         )}
 
-        {error && (
-          <div style={{ padding: "34px 26px", display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
-            <div style={{ fontSize: 14, color: "#8E3B21" }}>토지대장 조회 중 오류가 발생했습니다. (502 Bad Gateway)</div>
-            <button onClick={onRetry} className="btn-retry" style={retryBtnStyle}>
-              재시도
-            </button>
-          </div>
-        )}
+        {error && <ErrorBlock onRetry={onRetry} height={180} />}
       </div>
     </section>
   );
 }
-
-const retryBtnStyle = {
-  border: "1px solid #C9C3B6",
-  background: "#FFF",
-  padding: "9px 18px",
-  fontSize: 13,
-  fontFamily: "inherit",
-  borderRadius: 2,
-  cursor: "pointer",
-};

@@ -13,6 +13,7 @@ import { fetchBuilding } from "./api/backend.js";
 import { searchAddress } from "./api/search.js";
 
 const SECTION_IDS = ["summary", "zone", "land", "bld", "price"];
+const LOAD_TIMEOUT_MS = 5000;
 
 function timestamp() {
   const d = new Date();
@@ -35,37 +36,65 @@ export default function App() {
 
   // 토지·임야정보 / 토지이용계획 / 개별공시지가는 VWorld를 프론트에서 JSONP로 직접 호출한다(api/vworld.js).
   // 백엔드를 거치지 않으므로 로딩·성공·데이터없음·오류 상태를 여기서 그대로 tabs 상태에 반영한다.
+  // 3초 안에 응답이 오지 않으면 로딩 스피너 대신 오류+재시도 UI를 보여준다. 실제 응답이 나중에
+  // 오면 clearTimeout으로 이 타이머를 취소하고 정상 결과로 덮어쓴다.
   const loadLand = (id) => {
+    const timer = setTimeout(() => patch(id, { land: "error" }), LOAD_TIMEOUT_MS);
     fetchLadfrl(id)
-      .then((raw) => patch(id, { land: raw ? "ok" : "empty", landInfo: normalizeLand(raw) }))
-      .catch(() => patch(id, { land: "error" }));
+      .then((raw) => {
+        clearTimeout(timer);
+        patch(id, { land: raw ? "ok" : "empty", landInfo: normalizeLand(raw) });
+      })
+      .catch(() => {
+        clearTimeout(timer);
+        patch(id, { land: "error" });
+      });
   };
 
   const loadZone = (id) => {
+    const timer = setTimeout(() => patch(id, { zone: "error" }), LOAD_TIMEOUT_MS);
     fetchLandUse(id)
-      .then((items) => patch(id, { zone: items.length ? "ok" : "empty", zoneInfo: normalizeZone(items) }))
-      .catch(() => patch(id, { zone: "error" }));
+      .then((items) => {
+        clearTimeout(timer);
+        patch(id, { zone: items.length ? "ok" : "empty", zoneInfo: normalizeZone(items) });
+      })
+      .catch(() => {
+        clearTimeout(timer);
+        patch(id, { zone: "error" });
+      });
   };
 
   // 개별공시지가 — getIndvdLandPriceAttr로 필지(pnu) 단위 조회가 가능함이 확인됐다(8-8 참조).
   const loadPrice = (id) => {
+    const timer = setTimeout(() => patch(id, { price: "error" }), LOAD_TIMEOUT_MS);
     const thisYear = new Date().getFullYear();
     const years = Array.from({ length: 5 }, (_, i) => thisYear - 4 + i);
     fetchLandPriceHistory(id)
       .then((records) => {
+        clearTimeout(timer);
         const rows = normalizePriceRows(records, years);
         const hasAny = rows.some((r) => r.value != null);
         patch(id, { price: hasAny ? "ok" : "empty", priceChart: hasAny ? buildChart(rows) : null });
       })
-      .catch(() => patch(id, { price: "error" }));
+      .catch(() => {
+        clearTimeout(timer);
+        patch(id, { price: "error" });
+      });
   };
 
   // 건축물대장(F-03)은 juso.go.kr·건축HUB와 마찬가지로 배포 서버에서 차단된 적이 없어
   // 원래 설계대로 백엔드(FastAPI)를 거친다(api/backend.js) — VWorld 3종과는 다른 경로.
   const loadBuilding = (id, cand) => {
+    const timer = setTimeout(() => patch(id, { bld: "error" }), LOAD_TIMEOUT_MS);
     fetchBuilding({ sigunguCd: cand.sigunguCd, bjdongCd: cand.bjdongCd, platGbCd: cand.platGbCd, bun: cand.bun, ji: cand.ji })
-      .then((record) => patch(id, { bld: record.status, buildingInfo: record }))
-      .catch(() => patch(id, { bld: "error" }));
+      .then((record) => {
+        clearTimeout(timer);
+        patch(id, { bld: record.status, buildingInfo: record });
+      })
+      .catch(() => {
+        clearTimeout(timer);
+        patch(id, { bld: "error" });
+      });
   };
 
   // F-04 지도 좌표(Geocoder) — 선택된 주소 문자열을 그대로 넣어 얻는다(8-1 참조, PNU 불필요).
@@ -229,24 +258,37 @@ export default function App() {
     ? ["포함", "저촉", "접함"].map((kind) => zone.rules.filter((r) => r.kind === kind).length + "건 " + kind).join(" · ")
     : "";
   const summaryItems = [
-    { label: "토지이용계획", value: st.zone === "ok" ? zone.use : dash, sub: zoneRuleKinds, ready: st.zone === "ok" },
+    {
+      label: "토지이용계획",
+      value: st.zone === "ok" ? zone.use : dash,
+      sub: zoneRuleKinds,
+      ready: st.zone === "ok",
+      status: st.zone,
+      onRetry: () => retry("zone"),
+    },
     {
       label: "토지대장",
       value: st.land === "ok" ? land.area : st.land === "empty" ? "정보 없음" : dash,
       sub: st.land === "ok" ? `지목 ${land.jimok} · ${land.owner}` : st.land === "empty" ? "등록된 토지대장 없음" : "조회 중",
       ready: st.land === "ok" || st.land === "empty",
+      status: st.land,
+      onRetry: () => retry("land"),
     },
     {
       label: "건축물대장",
       value: st.bld === "ok" ? building.purpose : st.bld === "empty" ? "건축물 없음" : dash,
       sub: st.bld === "ok" ? building.floorSummary.split(" · ")[0] : st.bld === "empty" ? "나지" : "조회 중",
       ready: st.bld === "ok" || st.bld === "empty",
+      status: st.bld,
+      onRetry: () => retry("bld"),
     },
     {
       label: "공시지가",
       value: st.price === "ok" ? chart.priceLatest : st.price === "empty" ? "정보 없음" : dash,
       sub: st.price === "ok" ? `${chart.priceLatestYear} · ${chart.priceDelta.replace("전년 대비 ", "전년비 ")}` : st.price === "empty" ? "등록된 이력 없음" : "조회 중",
       ready: st.price === "ok" || st.price === "empty",
+      status: st.price,
+      onRetry: () => retry("price"),
     },
   ];
 
@@ -297,7 +339,7 @@ export default function App() {
       {sel && (
         <div style={{ maxWidth: 1180, margin: "0 auto", padding: "48px 32px 0", display: "flex", flexDirection: "column", gap: 64 }}>
           <SummarySection items={summaryItems} />
-          <ZoneSection status={st.zone} use={zone ? zone.use : ""} rules={zone ? zone.rules : []} />
+          <ZoneSection status={st.zone} use={zone ? zone.use : ""} rules={zone ? zone.rules : []} onRetry={() => retry("zone")} />
           <LandSection status={st.land} rows={landRows} onRetry={() => retry("land")} />
           <BuildingSection status={st.bld} building={building} onRetry={() => retry("bld")} />
           <PriceSection

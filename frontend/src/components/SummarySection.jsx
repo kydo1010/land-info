@@ -1,3 +1,5 @@
+import { LoadingBlock, ErrorBlock } from "./StatusBlocks.jsx";
+
 export default function SummarySection({ items }) {
   return (
     <section id="summary" data-screen-label="요약" style={{ scrollMarginTop: 190 }}>
@@ -18,32 +20,40 @@ export default function SummarySection({ items }) {
         {items.map((s) => (
           <div key={s.label} style={{ padding: "24px 26px", borderRight: "1px solid #EDEAE2" }}>
             <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em" }}>{s.label}</div>
-            <div
-              style={{
-                fontSize: 20,
-                fontWeight: 600,
-                letterSpacing: "-.02em",
-                marginTop: 8,
-                color: s.ready ? "#171614" : "#C9C3B6",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {s.value}
-            </div>
-            <div
-              style={{
-                fontSize: 13,
-                color: "#A6A19A",
-                marginTop: 5,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {s.sub}
-            </div>
+            {s.status === "loading" ? (
+              <LoadingBlock height={56} compact showText={false} />
+            ) : s.status === "error" ? (
+              <ErrorBlock onRetry={s.onRetry} height={56} compact showText={false} />
+            ) : (
+              <>
+                <div
+                  style={{
+                    fontSize: 20,
+                    fontWeight: 600,
+                    letterSpacing: "-.02em",
+                    marginTop: 8,
+                    color: s.ready ? "#171614" : "#C9C3B6",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {s.value}
+                </div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: "#A6A19A",
+                    marginTop: 5,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {s.sub}
+                </div>
+              </>
+            )}
           </div>
         ))}
       </div>

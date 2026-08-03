@@ -1,4 +1,5 @@
 import ParcelMap from "./ParcelMap.jsx";
+import { LoadingBlock, ErrorBlock } from "./StatusBlocks.jsx";
 
 export default function PriceSection({ status, selShort, coords, chart, onRetry }) {
   const loading = status === "loading";
@@ -49,13 +50,7 @@ export default function PriceSection({ status, selShort, coords, chart, onRetry 
         </div>
 
         <div style={{ padding: "20px 24px 24px" }}>
-          {loading && (
-            <div className="shimmer" style={{ height: 300, display: "flex", alignItems: "flex-end", gap: 14 }}>
-              {[1, 2, 3, 4, 5].map((k) => (
-                <div key={k} style={{ flex: 1, height: "60%", background: "#F0EDE6" }} />
-              ))}
-            </div>
-          )}
+          {loading && <LoadingBlock height={300} />}
 
           {status === "ok" && (
             <div>
@@ -141,26 +136,9 @@ export default function PriceSection({ status, selShort, coords, chart, onRetry 
             </div>
           )}
 
-          {error && (
-            <div style={{ height: 300, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14 }}>
-              <div style={{ fontSize: 14, color: "#8E3B21" }}>공시지가 조회 중 오류가 발생했습니다.</div>
-              <button onClick={onRetry} className="btn-retry" style={retryBtnStyle}>
-                재시도
-              </button>
-            </div>
-          )}
+          {error && <ErrorBlock onRetry={onRetry} height={300} />}
         </div>
       </div>
     </section>
   );
 }
-
-const retryBtnStyle = {
-  border: "1px solid #C9C3B6",
-  background: "#FFF",
-  padding: "9px 18px",
-  fontSize: 13,
-  fontFamily: "inherit",
-  borderRadius: 2,
-  cursor: "pointer",
-};

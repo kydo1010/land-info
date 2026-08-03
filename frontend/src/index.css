@@ -42,12 +42,23 @@ input::placeholder {
     transform: none;
   }
 }
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 .shimmer {
   animation: shimmer 1.3s ease-in-out infinite;
 }
 .rise-in {
   animation: riseIn 0.18s ease-out;
+}
+.spinner {
+  border-radius: 50%;
+  border: 3px solid #e5e1d8;
+  border-top-color: #1f4b43;
+  animation: spin 0.8s linear infinite;
 }
 
 /* interactive hover states (design uses style-hover; translated to real CSS here) */

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { LoadingBlock, ErrorBlock } from "./StatusBlocks.jsx";
 
 const FLOORS_COLLAPSED_HEIGHT = 190;
 
@@ -42,23 +43,7 @@ export default function BuildingSection({ status, building, onRetry }) {
         <div style={{ fontSize: 14, color: "#8C877E" }}>국토교통부 · 건축물대장 표제부 / 층별개요</div>
       </div>
       <div style={{ background: "#FFFFFF", border: "1px solid #E5E1D8", borderRadius: 3 }}>
-        {loading && (
-          <div style={{ padding: 26 }}>
-            <div className="shimmer" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 22 }}>
-              {[1, 2, 3].map((k) => (
-                <div key={k}>
-                  <div style={{ height: 10, width: 52, background: "#EDEAE2" }} />
-                  <div style={{ height: 20, width: "76%", background: "#E7E3DA", marginTop: 12 }} />
-                </div>
-              ))}
-            </div>
-            <div className="shimmer" style={{ marginTop: 26, display: "flex", flexDirection: "column", gap: 9 }}>
-              {[1, 2, 3, 4].map((k) => (
-                <div key={k} style={{ height: 14, background: "#F0EDE6" }} />
-              ))}
-            </div>
-          </div>
-        )}
+        {loading && <LoadingBlock height={220} />}
 
         {status === "ok" && (
           <div>
@@ -304,25 +289,8 @@ export default function BuildingSection({ status, building, onRetry }) {
           </div>
         )}
 
-        {error && (
-          <div style={{ padding: "34px 26px", display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
-            <div style={{ fontSize: 14, color: "#8E3B21" }}>건축물대장 조회 중 오류가 발생했습니다. (응답 시간 초과)</div>
-            <button onClick={onRetry} className="btn-retry" style={retryBtnStyle}>
-              재시도
-            </button>
-          </div>
-        )}
+        {error && <ErrorBlock onRetry={onRetry} height={220} />}
       </div>
     </section>
   );
 }
-
-const retryBtnStyle = {
-  border: "1px solid #C9C3B6",
-  background: "#FFF",
-  padding: "9px 18px",
-  fontSize: 13,
-  fontFamily: "inherit",
-  borderRadius: 2,
-  cursor: "pointer",
-};
