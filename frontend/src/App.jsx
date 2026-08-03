@@ -16,6 +16,8 @@ import { exportElementToPdf } from "./utils/exportPdf.js";
 
 const SECTION_IDS = ["summary", "zone", "land", "bld", "price"];
 const LOAD_TIMEOUT_MS = 5000;
+const AUTOCOMPLETE_MIN_LEN = 2;
+const AUTOCOMPLETE_DEBOUNCE_MS = 300;
 
 function timestamp() {
   const d = new Date();
@@ -33,6 +35,8 @@ export default function App() {
   const [expandAll, setExpandAll] = useState(false);
   const blankTabCounter = useRef(0);
   const reportRef = useRef(null);
+  const autocompleteTimer = useRef(null);
+  const searchSeq = useRef(0);
 
   const patch = (id, obj) => {
     setTabs((prev) => prev.map((t) => (t.id === id ? { ...t, ...obj } : t)));
@@ -211,7 +215,9 @@ export default function App() {
   // qOverride: EmptyState의 예시 버튼처럼 setQuery 직후 바로 검색해야 할 때, setQuery의 상태
   // 반영을 기다리지 않고 그 값으로 바로 검색하기 위해 받는다(state 클로저 지연 문제 회피).
   const runSearch = (qOverride) => {
+    clearTimeout(autocompleteTimer.current);
     const q = (qOverride ?? query).trim();
+    const seq = ++searchSeq.current;
     if (!q) {
       setSearch("none");
       setCandidates([]);
@@ -220,10 +226,27 @@ export default function App() {
     setSearch("loading");
     searchAddress(q)
       .then((results) => {
+        if (seq !== searchSeq.current) return; // 타이핑 중 더 최신 요청이 나갔으면 늦게 온 응답은 버린다.
         setCandidates(results);
         setSearch(results.length ? "results" : "none");
       })
-      .catch(() => setSearch("error"));
+      .catch(() => {
+        if (seq !== searchSeq.current) return;
+        setSearch("error");
+      });
+  };
+
+  // 자동완성: 입력이 멈춘 뒤 300ms 후, 2자 이상이면 자동으로 검색한다.
+  const handleQueryChange = (value) => {
+    setQuery(value);
+    clearTimeout(autocompleteTimer.current);
+    if (value.trim().length < AUTOCOMPLETE_MIN_LEN) {
+      searchSeq.current++; // 진행 중이던 검색 응답도 무효화해 늦게 덮어쓰지 않게 한다.
+      setSearch("idle");
+      setCandidates([]);
+      return;
+    }
+    autocompleteTimer.current = setTimeout(() => runSearch(value), AUTOCOMPLETE_DEBOUNCE_MS);
   };
 
   const retry = (key) => {
@@ -344,7 +367,7 @@ export default function App() {
         onCloseTab={closeTab}
         onNewTab={newTab}
         query={query}
-        onQueryChange={(e) => setQuery(e.target.value)}
+        onQueryChange={(e) => handleQueryChange(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") runSearch();
         }}

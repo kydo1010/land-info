@@ -1,3 +1,5 @@
+import { LoadingBlock } from "./StatusBlocks.jsx";
+
 const SECTIONS = [
   { id: "summary", label: "요약" },
   { id: "zone", label: "토지이용계획" },
@@ -187,6 +189,12 @@ export default function Header({
           <button onClick={onSearch} className="btn-search" style={btnSearchStyle}>
             검색
           </button>
+
+          {searchState === "loading" && (
+            <div className="rise-in" style={dropdownStyle}>
+              <LoadingBlock height={72} compact />
+            </div>
+          )}
 
           {searchState === "results" && (
             <div className="rise-in" style={dropdownStyle}>
