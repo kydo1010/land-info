@@ -13,6 +13,7 @@ export function normalizeLand(raw) {
   return {
     jimok: raw.lndcgrCodeNm,
     area: fmtArea(raw.lndpclAr),
+    areaSqm, // 토지 공시가격(면적 × 개별공시지가) 계산용 원본 숫자값 — App.jsx에서 사용.
     areaPyeong: `약 ${(areaSqm * 0.3025).toLocaleString("en-US", { maximumFractionDigits: 1 })}평`,
     owner: raw.posesnSeCodeNm,
   };

@@ -59,6 +59,7 @@ export function buildChart(rows) {
     return {
       year: r.year,
       value: r.value ? num(r.value) : "데이터 미제공",
+      rawValue: r.value ?? null, // 토지 공시가격(면적 × 개별공시지가) 계산용 — App.jsx에서 사용.
       delta,
       valueColor: r.value ? "#171614" : "#A6A19A",
       deltaColor: delta.startsWith("+") ? "#1F4B43" : "#A6A19A",
@@ -77,6 +78,7 @@ export function buildChart(rows) {
     priceRows,
     hasGap: rows.some((r) => r.value == null),
     priceLatest: num(last.value),
+    priceLatestValue: last.value, // 토지 공시가격(면적 × 개별공시지가) 계산용 원본 숫자값.
     priceLatestYear: last.year,
     priceDelta: prev ? "전년 대비 +" + (((last.value - prev.value) / prev.value) * 100).toFixed(1) + "%" : "—",
   };

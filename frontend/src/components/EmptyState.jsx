@@ -10,7 +10,7 @@ export default function EmptyState({ onUseExample }) {
           필지의 네 가지 기록을 한 번에.
         </div>
         <div style={{ fontSize: 15, color: "#6B665E", lineHeight: 1.7, marginTop: 18 }}>
-          토지이용계획 · 토지대장 · 건축물대장 · 개별공시지가를 각 기관 사이트를 오가지 않고 <br />한 화면의 보고서로
+          토지이용계획 · 토지대장 · 건축물대장 · 토지 개별공시지가를 각 기관 사이트를 오가지 않고 <br />한 화면의 보고서로
           확인합니다.
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 28, flexWrap: "wrap" }}>

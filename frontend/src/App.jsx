@@ -8,7 +8,7 @@ import LandSection from "./components/LandSection.jsx";
 import BuildingSection from "./components/BuildingSection.jsx";
 import PriceSection from "./components/PriceSection.jsx";
 import { normalizeLand, normalizeZone, normalizePriceRows } from "./data/normalize.js";
-import { buildChart } from "./utils/format.js";
+import { buildChart, num } from "./utils/format.js";
 import { fetchLadfrl, fetchLandUse, fetchLandPriceHistory, fetchCoordinates } from "./api/vworld.js";
 import { fetchBuilding } from "./api/backend.js";
 import { searchAddress } from "./api/search.js";
@@ -310,6 +310,21 @@ export default function App() {
   const zoneRuleKinds = zone
     ? ["포함", "저촉", "접함"].map((kind) => zone.rules.filter((r) => r.kind === kind).length + "건 " + kind).join(" · ")
     : "";
+
+  // 토지 공시가격 = 토지 면적(㎡, 토지대장) × 개별공시지가(원/㎡, 공시지가). 두 값은 서로 독립적으로
+  // 조회되므로 하나가 아직 없거나(로딩/오류) 필지에 없으면(empty) 계산하지 않고 dash로 남긴다.
+  const landAreaSqm = land ? land.areaSqm : null;
+  const formatWon = (v) => `${num(Math.round(v))}원`;
+  const landPriceLatest =
+    st.price === "ok" && landAreaSqm != null ? formatWon(landAreaSqm * chart.priceLatestValue) : dash;
+  const landPriceRows =
+    st.price === "ok"
+      ? chart.priceRows.map((r) => ({
+          year: r.year,
+          value: landAreaSqm != null && r.rawValue != null ? formatWon(landAreaSqm * r.rawValue) : dash,
+        }))
+      : [];
+
   const summaryItems = [
     {
       label: "토지이용계획",
@@ -328,22 +343,24 @@ export default function App() {
       onRetry: () => retry("land"),
     },
     {
-      label: "건축물대장",
-      value: st.bld === "ok" ? building.purpose : st.bld === "empty" ? "건축물 없음" : dash,
-      sub: st.bld === "ok" ? building.floorSummary.split(" · ")[0] : st.bld === "empty" ? "나지" : "조회 중",
-      ready: st.bld === "ok" || st.bld === "empty",
-      status: st.bld,
-      onRetry: () => retry("bld"),
-    },
-    {
-      label: "공시지가",
-      value: st.price === "ok" ? chart.priceLatest : st.price === "empty" ? "정보 없음" : dash,
+      label: "토지 개별공시지가",
+      value: st.price === "ok" ? `${chart.priceLatest}원/㎡` : st.price === "empty" ? "정보 없음" : dash,
       sub: st.price === "ok" ? `${chart.priceLatestYear} · ${chart.priceDelta.replace("전년 대비 ", "전년비 ")}` : st.price === "empty" ? "등록된 이력 없음" : "조회 중",
       ready: st.price === "ok" || st.price === "empty",
       status: st.price,
       onRetry: () => retry("price"),
+      extra: st.price === "ok" ? { label: "토지 공시가격", value: landPriceLatest } : null,
     },
   ];
+
+  const buildingSummaryItem = {
+    label: "건축물대장",
+    value: st.bld === "ok" ? building.purpose : st.bld === "empty" ? "건축물 없음" : dash,
+    sub: st.bld === "ok" ? building.floorSummary.split(" · ")[0] : st.bld === "empty" ? "나지" : "조회 중",
+    ready: st.bld === "ok" || st.bld === "empty",
+    status: st.bld,
+    onRetry: () => retry("bld"),
+  };
 
   const landRows = land
     ? [
@@ -406,7 +423,7 @@ export default function App() {
               <div style={{ marginLeft: "auto", fontSize: 12, color: "#8C877E" }}>PNU {sel.pnu}</div>
             </div>
           )}
-          <SummarySection items={summaryItems} />
+          <SummarySection items={summaryItems} buildingItem={buildingSummaryItem} />
           <ZoneSection
             status={st.zone}
             use={zone ? zone.use : ""}
@@ -421,6 +438,8 @@ export default function App() {
             selShort={sel.jibun.split(" ").slice(-2).join(" ")}
             coords={tab?.coords}
             chart={chart}
+            landPriceLatest={landPriceLatest}
+            landPriceRows={landPriceRows}
             onRetry={() => retry("price")}
           />
 

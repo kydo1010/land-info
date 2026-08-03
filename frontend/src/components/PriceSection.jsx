@@ -1,17 +1,17 @@
 import ParcelMap from "./ParcelMap.jsx";
 import { LoadingBlock, ErrorBlock } from "./StatusBlocks.jsx";
 
-export default function PriceSection({ status, selShort, coords, chart, onRetry }) {
+export default function PriceSection({ status, selShort, coords, chart, landPriceLatest, landPriceRows, onRetry }) {
   const loading = status === "loading";
   const empty = status === "empty";
   const error = status === "error";
 
   return (
-    <section id="price" data-screen-label="공시지가 트래커" style={{ scrollMarginTop: 190 }}>
+    <section id="price" data-screen-label="토지 개별공시지가 트래커" style={{ scrollMarginTop: 190 }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 14 }}>
         <div style={{ fontSize: 11, color: "#1F4B43", letterSpacing: ".1em" }}>04</div>
-        <h2 style={{ margin: 0, fontSize: 25, fontWeight: 700, letterSpacing: "-.025em" }}>공시지가 트래커</h2>
-        <div style={{ fontSize: 14, color: "#8C877E" }}>국토교통부 · 개별공시지가 (최근 5개년)</div>
+        <h2 style={{ margin: 0, fontSize: 25, fontWeight: 700, letterSpacing: "-.025em" }}>토지 개별공시지가 트래커</h2>
+        <div style={{ fontSize: 14, color: "#8C877E" }}>국토교통부 · 토지 개별공시지가 (최근 5개년)</div>
       </div>
 
       <div
@@ -56,11 +56,15 @@ export default function PriceSection({ status, selShort, coords, chart, onRetry 
             <div>
               <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 6 }}>
                 <div>
-                  <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em" }}>{chart.priceLatestYear} 개별공시지가</div>
+                  <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em" }}>{chart.priceLatestYear} 토지 개별공시지가</div>
                   <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 6 }}>
                     <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: "-.02em" }}>{chart.priceLatest}</div>
                     <div style={{ fontSize: 13, color: "#6B665E" }}>원/㎡</div>
                     <div style={{ fontSize: 12.5, color: "#1F4B43" }}>{chart.priceDelta}</div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 10 }}>
+                    <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em" }}>토지 공시가격</div>
+                    <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: "-.02em", color: "#171614" }}>{landPriceLatest}</div>
                   </div>
                 </div>
                 <div style={{ fontSize: 11.5, color: "#A6A19A" }}>단위 원/㎡ · 기준일 1월 1일</div>
@@ -105,15 +109,17 @@ export default function PriceSection({ status, selShort, coords, chart, onRetry 
               </div>
 
               <div style={{ marginTop: 18, borderTop: "1px solid #E5E1D8" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "80px 1fr 120px", fontSize: 11.5, color: "#8C877E", padding: "9px 2px", borderBottom: "1px solid #EDEAE2" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "80px 1fr 170px 110px", fontSize: 11.5, color: "#8C877E", padding: "9px 2px", borderBottom: "1px solid #EDEAE2" }}>
                   <div>연도</div>
-                  <div style={{ textAlign: "right" }}>공시지가 (원/㎡)</div>
+                  <div style={{ textAlign: "right" }}>토지 개별공시지가 (원/㎡)</div>
+                  <div style={{ textAlign: "right" }}>토지 공시가격 (원)</div>
                   <div style={{ textAlign: "right" }}>전년 대비</div>
                 </div>
-                {chart.priceRows.map((r) => (
-                  <div key={r.year} style={{ display: "grid", gridTemplateColumns: "80px 1fr 120px", fontSize: 15.5, padding: "10px 2px", borderBottom: "1px solid #F3F0E9" }}>
+                {chart.priceRows.map((r, i) => (
+                  <div key={r.year} style={{ display: "grid", gridTemplateColumns: "80px 1fr 170px 110px", fontSize: 15.5, padding: "10px 2px", borderBottom: "1px solid #F3F0E9" }}>
                     <div style={{ color: "#3D3A34" }}>{r.year}</div>
                     <div style={{ textAlign: "right", color: r.valueColor }}>{r.value}</div>
+                    <div style={{ textAlign: "right", color: r.valueColor }}>{landPriceRows[i]?.value ?? "—"}</div>
                     <div style={{ textAlign: "right", fontSize: 14.5, color: r.deltaColor }}>{r.delta}</div>
                   </div>
                 ))}
@@ -131,8 +137,8 @@ export default function PriceSection({ status, selShort, coords, chart, onRetry 
           {empty && (
             <div style={{ height: 300, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
               <div style={{ width: 34, height: 34, marginBottom: 14, border: "1.5px dashed #C9C3B6" }} />
-              <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-.02em" }}>개별공시지가 정보를 찾을 수 없습니다</div>
-              <div style={{ fontSize: 13, color: "#8C877E", marginTop: 6 }}>이 필지의 개별공시지가 이력이 등록돼 있지 않습니다.</div>
+              <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-.02em" }}>토지 개별공시지가 정보를 찾을 수 없습니다</div>
+              <div style={{ fontSize: 13, color: "#8C877E", marginTop: 6 }}>이 필지의 토지 개별공시지가 이력이 등록돼 있지 않습니다.</div>
             </div>
           )}
 

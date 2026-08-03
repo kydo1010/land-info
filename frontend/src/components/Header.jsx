@@ -5,7 +5,7 @@ const SECTIONS = [
   { id: "zone", label: "토지이용계획" },
   { id: "land", label: "토지대장" },
   { id: "bld", label: "건축물대장" },
-  { id: "price", label: "공시지가" },
+  { id: "price", label: "토지 개별공시지가" },
 ];
 
 export default function Header({
@@ -385,7 +385,7 @@ const btnPrintStyle = {
   letterSpacing: "-.01em",
   border: "1px solid #D8D3C8",
   background: "#FFFFFF",
-  color: "#3D3A34",
+  color: "#726f6aff",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
