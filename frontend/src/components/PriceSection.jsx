@@ -71,7 +71,12 @@ export default function PriceSection({ status, selShort, coords, chart, landPric
               </div>
 
               <div style={{ position: "relative", width: "100%", height: 190 }}>
-                <svg viewBox="0 0 560 210" preserveAspectRatio="none" style={{ width: "100%", height: 190, display: "block" }}>
+                <svg
+                  className="price-chart-svg"
+                  viewBox="0 0 560 210"
+                  preserveAspectRatio="none"
+                  style={{ width: "100%", height: 190, display: "block" }}
+                >
                   {chart.gridLines.map((g, i) => (
                     <line key={i} x1={102} x2={556} y1={g.y} y2={g.y} stroke="#EDEAE2" strokeWidth={1} />
                   ))}
