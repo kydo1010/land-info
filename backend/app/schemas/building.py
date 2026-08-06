@@ -118,6 +118,7 @@ class FloorRow(CamelModel):
     purpose: str
     struct: str
     area: str
+    area_pyeong: str  # area(㎡)의 평 환산 — 표에서 area 아래 별도 줄로 병기한다.
 
 
 class Certification(CamelModel):
@@ -133,12 +134,16 @@ class SewageInfo(CamelModel):
 class ParkingInfo(CamelModel):
     indoor_auto_count: str
     indoor_auto_area: str
+    indoor_auto_area_pyeong: str  # indoor_auto_area(㎡)의 평 환산 — 표에서 area 아래 별도 줄로 병기한다.
     indoor_mech_count: str
     indoor_mech_area: str
+    indoor_mech_area_pyeong: str
     outdoor_auto_count: str
     outdoor_auto_area: str
+    outdoor_auto_area_pyeong: str
     outdoor_mech_count: str
     outdoor_mech_area: str
+    outdoor_mech_area_pyeong: str
 
 
 class BuildingRecord(CamelModel):
@@ -156,6 +161,7 @@ class BuildingRecord(CamelModel):
     struct: str | None = None
     purpose: str | None = None
     total_floor_area: str | None = None  # 연면적 — 층별개요 각 층 면적의 합(표제부 tot_area가 아님, 여러 동 대응).
+    total_floor_area_pyeong: str | None = None  # total_floor_area(㎡)의 평 환산 — 프론트에서 값 아래 별도 줄로 병기.
     floor_range: str | None = None  # 예: "지하 2층 / 지상 5층" (지하 없으면 "지상 1층 / 지상 5층") — 층별개요 전체 기준.
     bcr: str | None = None
     far: str | None = None
@@ -174,11 +180,15 @@ class BuildingRecord(CamelModel):
     zoning_district: str | None = None
     zoning_area: str | None = None
     site_area: str | None = None  # 대지면적(표제부 plat_area) — "면적 및 구조 정보"에 표시.
+    site_area_pyeong: str | None = None
     build_area: str | None = None  # 건축면적(표제부 arch_area) — "면적 및 구조 정보"에 표시.
+    build_area_pyeong: str | None = None
     vl_rat_area: str | None = None
+    vl_rat_area_pyeong: str | None = None
     height: str | None = None
     roof: str | None = None
     annex_summary: str | None = None
+    annex_area_pyeong: str | None = None  # annex_summary 안의 면적(atch_bld_area)의 평 환산.
     elevator_ride: str | None = None
     elevator_emergency: str | None = None
     permit_day: str | None = None
@@ -201,6 +211,18 @@ def _fmt_date_opt(yyyymmdd: str) -> str:
 
 def _fmt_area(v: float) -> str:
     return f"{v:,.2f}㎡" if v % 1 else f"{v:,.0f}㎡"
+
+
+# 1㎡ = 0.3025평 — frontend/src/utils/format.js의 PYEONG_PER_SQM과 동일한 환산율(양쪽이 다른 값을
+# 쓰면 같은 필지인데 프론트가 계산한 평수와 백엔드가 내려준 평수가 어긋나 보인다).
+PYEONG_PER_SQM = 0.3025
+
+
+def _fmt_pyeong(v: float) -> str:
+    """기존 ㎡ 값(_fmt_area)은 그대로 두고, 평 환산 값을 별도 필드로 내려서 프론트가 값 아래 둘째
+    줄로 병기하게 한다(예: total_floor_area_pyeong, FloorRow.area_pyeong, ParkingInfo의
+    *_area_pyeong) — 같은 줄에 괄호로 붙이지 않는다."""
+    return f"약 {round(v * PYEONG_PER_SQM):,}평"
 
 
 def _fmt_text(v: str) -> str:
@@ -286,10 +308,14 @@ def to_building_record(
         struct=title.strct_cd_nm,
         purpose=title.main_purps_cd_nm,
         total_floor_area=_fmt_area(_floor_area_total(floors)) if floors else None,
+        total_floor_area_pyeong=_fmt_pyeong(_floor_area_total(floors)) if floors else None,
         floor_range=_floor_range(floors),
         bcr=f"{title.bc_rat:,.2f}%",
         far=f"{title.vl_rat:,.2f}%",
         approved=_fmt_date(title.use_apr_day),
+        # 이 캡션의 연면적 값은 위 total_floor_area와 같은 수치라 그 평 환산은 "건축 규모" 블록의
+        # total_floor_area_pyeong 줄에서 이미 보여준다 — 한 문장 안이라 둘째 줄을 넣을 자리가 없어
+        # 여기서는 굳이 반복하지 않는다.
         floor_summary=f"지하 {title.ugrnd_flr_cnt}층 / 지상 {title.grnd_flr_cnt}층 · 연면적 {_fmt_area(title.tot_area)}",
         floors=[
             FloorRow(
@@ -300,6 +326,7 @@ def to_building_record(
                 purpose=f.main_purps_cd_nm,
                 struct=f.strct_cd_nm,
                 area=f"{f.area:,.2f}",
+                area_pyeong=_fmt_pyeong(f.area),
             )
             for f in sorted(floors, key=_floor_sort_key)
         ],
@@ -314,11 +341,15 @@ def to_building_record(
         zoning_district=_fmt_text(basis.jigu_cd_nm) if basis else "-",
         zoning_area=_fmt_text(basis.guyuk_cd_nm) if basis else "-",
         site_area=_fmt_area(title.plat_area),
+        site_area_pyeong=_fmt_pyeong(title.plat_area),
         build_area=_fmt_area(title.arch_area),
+        build_area_pyeong=_fmt_pyeong(title.arch_area),
         vl_rat_area=_fmt_area(title.vl_rat_estm_tot_area),
+        vl_rat_area_pyeong=_fmt_pyeong(title.vl_rat_estm_tot_area),
         height=f"{title.heit:,.2f}m" if title.heit else "-",
         roof=_fmt_text(title.roof_cd_nm),
         annex_summary=f"{title.atch_bld_cnt}동 {_fmt_area(title.atch_bld_area)}" if title.atch_bld_cnt else "-",
+        annex_area_pyeong=_fmt_pyeong(title.atch_bld_area) if title.atch_bld_cnt else None,
         elevator_ride=_fmt_count(title.ride_use_elvt_cnt),
         elevator_emergency=_fmt_count(title.emgen_use_elvt_cnt),
         permit_day=_fmt_date_opt(title.pms_day),
@@ -330,11 +361,15 @@ def to_building_record(
         parking=ParkingInfo(
             indoor_auto_count=_fmt_count(parking_source.indr_auto_utcnt),
             indoor_auto_area=_fmt_area(parking_source.indr_auto_area),
+            indoor_auto_area_pyeong=_fmt_pyeong(parking_source.indr_auto_area),
             indoor_mech_count=_fmt_count(parking_source.indr_mech_utcnt),
             indoor_mech_area=_fmt_area(parking_source.indr_mech_area),
+            indoor_mech_area_pyeong=_fmt_pyeong(parking_source.indr_mech_area),
             outdoor_auto_count=_fmt_count(parking_source.oudr_auto_utcnt),
             outdoor_auto_area=_fmt_area(parking_source.oudr_auto_area),
+            outdoor_auto_area_pyeong=_fmt_pyeong(parking_source.oudr_auto_area),
             outdoor_mech_count=_fmt_count(parking_source.oudr_mech_utcnt),
             outdoor_mech_area=_fmt_area(parking_source.oudr_mech_area),
+            outdoor_mech_area_pyeong=_fmt_pyeong(parking_source.oudr_mech_area),
         ),
     )

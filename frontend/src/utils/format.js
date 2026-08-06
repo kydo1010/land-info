@@ -2,6 +2,13 @@ export const num = (n) => n.toLocaleString("en-US");
 
 // 숫자와 단위(㎡, %, 건, 평, 원/㎡ 등) 사이에 얇은 공백을 넣어 가독성을 높인다.
 const UNIT = /([\d.,]) ?(㎡|%|건|평|원\/㎡|원|만|층|㎡\))/g;
+// 1㎡ = 0.3025평 — backend/app/schemas/building.py의 PYEONG_PER_SQM과 동일한 환산율(양쪽이 다른
+// 값을 쓰면 같은 필지인데 프론트가 계산한 평수와 백엔드가 내려준 평수가 어긋나 보인다).
+export const PYEONG_PER_SQM = 0.3025;
+export const toPyeongArea = (sqm) => sqm * PYEONG_PER_SQM;
+export const fmtPyeongArea = (sqm) => `약 ${Math.round(toPyeongArea(sqm)).toLocaleString("en-US")}평`;
+// 원/㎡ 같은 단위면적당 가격을 원/평으로 바꾼다 — 면적이 아니라 "단위면적당 값"이라 곱하는 게 아니라 나눈다.
+export const toPricePerPyeong = (pricePerSqm) => pricePerSqm / PYEONG_PER_SQM;
 export const sp = (v) => (typeof v === "string" ? v.replace(UNIT, "$1 $2") : v);
 
 // 공시지가 5개년 꺾은선 차트 좌표 계산. rows는 [{year, value|null}, ...] — value가 null인
@@ -59,6 +66,7 @@ export function buildChart(rows) {
     return {
       year: r.year,
       value: r.value ? num(r.value) : "데이터 미제공",
+      pyeongValue: r.value ? num(Math.round(toPricePerPyeong(r.value))) : null, // 원/평 환산값 — 표에서 원/㎡ 아래 별도 줄로 병기.
       rawValue: r.value ?? null, // 토지 공시가격(면적 × 개별공시지가) 계산용 — App.jsx에서 사용.
       delta,
       valueColor: r.value ? "#171614" : "#A6A19A",
@@ -78,6 +86,7 @@ export function buildChart(rows) {
     priceRows,
     hasGap: rows.some((r) => r.value == null),
     priceLatest: num(last.value),
+    priceLatestPyeong: num(Math.round(toPricePerPyeong(last.value))), // 원/평 환산값.
     priceLatestValue: last.value, // 토지 공시가격(면적 × 개별공시지가) 계산용 원본 숫자값.
     priceLatestYear: last.year,
     priceDelta: prev ? "전년 대비 +" + (((last.value - prev.value) / prev.value) * 100).toFixed(1) + "%" : "—",

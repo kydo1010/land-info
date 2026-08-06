@@ -3,11 +3,16 @@ import { LoadingBlock, ErrorBlock } from "./StatusBlocks.jsx";
 
 const FLOORS_COLLAPSED_HEIGHT = 190;
 
-function InfoRow({ label, value }) {
+function InfoRow({ label, value, note }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "170px 1fr", padding: "10px 2px", borderBottom: "1px solid #F3F0E9", fontSize: 14.5, alignItems: "baseline" }}>
       <div style={{ color: "#8C877E" }}>{label}</div>
-      <div style={{ color: "#171614", fontWeight: 500, letterSpacing: "-.01em" }}>{value}</div>
+      <div>
+        <div style={{ color: "#171614", fontWeight: 500, letterSpacing: "-.01em" }}>{value}</div>
+        {/* 평 단위 값 — ㎡ 값 옆에 괄호로 붙이지 않고 그 아래 별도 줄로 병기한다. 크기는 ㎡ 값의 80%,
+            굵기는 없앰(그 외 색 등은 동일). */}
+        {note && <div style={{ fontSize: "80%", color: "#171614", letterSpacing: "-.01em", marginTop: 2 }}>{note}</div>}
+      </div>
     </div>
   );
 }
@@ -17,8 +22,8 @@ function InfoGroup({ title, rows }) {
     <div style={{ padding: "22px 26px", borderBottom: "1px solid #EDEAE2" }}>
       <div style={{ marginBottom: 10 }}>{title}</div>
       <div>
-        {rows.map(([label, value]) => (
-          <InfoRow key={label} label={label} value={value} />
+        {rows.map(([label, value, note]) => (
+          <InfoRow key={label} label={label} value={value} note={note} />
         ))}
       </div>
     </div>
@@ -61,6 +66,9 @@ export default function BuildingSection({ status, building, onRetry, forceExpand
                 <ul style={{ margin: "8px 0 0", padding: "0 0 0 18px", listStyle: "disc", display: "flex", flexDirection: "column", gap: 6 }}>
                   <li style={{ fontSize: 14, color: "#6B665E" }}>
                     연면적 <span style={{ fontSize: 15.5, color: "#171614", fontWeight: 600 }}>{b.totalFloorArea || "—"}</span>
+                    {b.totalFloorAreaPyeong && (
+                      <div style={{ fontSize: 15.5 * 0.8, color: "#171614", marginTop: 2 }}>{b.totalFloorAreaPyeong}</div>
+                    )}
                   </li>
                   <li style={{ fontSize: 14, color: "#6B665E" }}>
                     층수 <span style={{ fontSize: 15.5, color: "#171614", fontWeight: 600 }}>{b.floorRange || "—"}</span>
@@ -96,15 +104,15 @@ export default function BuildingSection({ status, building, onRetry, forceExpand
             <InfoGroup
               title=<h3 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: "-.02em", color: "#777777" }}>면적 및 구조 정보</h3>
               rows={[
-                ["대지면적", b.siteArea],
-                ["건축면적", b.buildArea],
-                ["용적률 산정용 연면적", b.vlRatArea],
+                ["대지면적", b.siteArea, b.siteAreaPyeong],
+                ["건축면적", b.buildArea, b.buildAreaPyeong],
+                ["용적률 산정용 연면적", b.vlRatArea, b.vlRatAreaPyeong],
                 ["지역", b.zoningRegion],
                 ["지구", b.zoningDistrict],
                 ["구역", b.zoningArea],
                 ["높이", b.height],
                 ["지붕", b.roof],
-                ["부속건축물", b.annexSummary],
+                ["부속건축물", b.annexSummary, b.annexAreaPyeong],
               ]}
             />
 
@@ -170,7 +178,10 @@ export default function BuildingSection({ status, building, onRetry, forceExpand
                         <div style={{ color: "#3D3A34" }}>{f.floor}</div>
                         <div style={{ letterSpacing: "-.01em" }}>{f.purpose}</div>
                         <div style={{ color: "#6B665E", fontSize: 14.5 }}>{f.struct}</div>
-                        <div style={{ textAlign: "right" }}>{f.area}</div>
+                        <div style={{ textAlign: "right" }}>
+                          <div>{f.area}</div>
+                          <div style={{ fontSize: "80%", marginTop: 2 }}>{f.areaPyeong}</div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -249,19 +260,31 @@ export default function BuildingSection({ status, building, onRetry, forceExpand
                 <div style={{ display: "grid", gridTemplateColumns: "100px 1fr 1fr", fontSize: 14.5, padding: "11px 2px", borderBottom: "1px solid #F3F0E9", alignItems: "center" }}>
                   <div style={{ color: "#8C877E" }}>자주식</div>
                   <div>
-                    {b.parking.indoorAutoCount} / {b.parking.indoorAutoArea}
+                    <div>
+                      {b.parking.indoorAutoCount} / {b.parking.indoorAutoArea}
+                    </div>
+                    <div style={{ fontSize: "80%", marginTop: 2 }}>{b.parking.indoorAutoAreaPyeong}</div>
                   </div>
                   <div>
-                    {b.parking.outdoorAutoCount} / {b.parking.outdoorAutoArea}
+                    <div>
+                      {b.parking.outdoorAutoCount} / {b.parking.outdoorAutoArea}
+                    </div>
+                    <div style={{ fontSize: "80%", marginTop: 2 }}>{b.parking.outdoorAutoAreaPyeong}</div>
                   </div>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "100px 1fr 1fr", fontSize: 14.5, padding: "11px 2px", alignItems: "center" }}>
                   <div style={{ color: "#8C877E" }}>기계식</div>
                   <div>
-                    {b.parking.indoorMechCount} / {b.parking.indoorMechArea}
+                    <div>
+                      {b.parking.indoorMechCount} / {b.parking.indoorMechArea}
+                    </div>
+                    <div style={{ fontSize: "80%", marginTop: 2 }}>{b.parking.indoorMechAreaPyeong}</div>
                   </div>
                   <div>
-                    {b.parking.outdoorMechCount} / {b.parking.outdoorMechArea}
+                    <div>
+                      {b.parking.outdoorMechCount} / {b.parking.outdoorMechArea}
+                    </div>
+                    <div style={{ fontSize: "80%", marginTop: 2 }}>{b.parking.outdoorMechAreaPyeong}</div>
                   </div>
                 </div>
               </div>

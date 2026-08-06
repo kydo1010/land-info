@@ -2,7 +2,7 @@
 // 토지대장·토지이용계획·개별공시지가는 프론트에서 VWorld를 JSONP로 직접 호출해 받은 실제 응답
 // (api/vworld.js)을 여기서 변환한다. 건축물대장은 백엔드(api/backend.js)의 BuildingRecord가
 // 이미 이 파일과 같은 모양으로 내려오므로(backend/app/schemas/building.py 참조) 별도 변환이 필요 없다.
-import { num, sp } from "../utils/format.js";
+import { num, sp, fmtPyeongArea } from "../utils/format.js";
 
 const fmtArea = (v) => sp(`${num(Number(v))}㎡`);
 
@@ -14,7 +14,7 @@ export function normalizeLand(raw) {
     jimok: raw.lndcgrCodeNm,
     area: fmtArea(raw.lndpclAr),
     areaSqm, // 토지 공시가격(면적 × 개별공시지가) 계산용 원본 숫자값 — App.jsx에서 사용.
-    areaPyeong: `약 ${(areaSqm * 0.3025).toLocaleString("en-US", { maximumFractionDigits: 1 })}평`,
+    areaPyeong: fmtPyeongArea(areaSqm),
     owner: raw.posesnSeCodeNm,
   };
 }

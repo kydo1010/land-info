@@ -1,8 +1,8 @@
 import { LoadingBlock, ErrorBlock } from "./StatusBlocks.jsx";
 
-// 요약의 첫 번째 행(4열 값 타일)과 두 번째 행(건축물대장 4열)이 서로 다른 내용 구조를 갖고 있어도 같은 높이로 보이도록 두 행 모두 이 값을 minHeight로 준다 — 둘 중 더 큰 쪽(건축 규모/건폐율·용적률처럼
-// 불릿 2줄이 들어가는 칸)에 맞춘 값이다.
-const TILE_MIN_HEIGHT = 124;
+// 요약의 첫 번째 행(4열 값 타일)과 두 번째 행(건축물대장 4열)이 서로 다른 내용 구조를 갖고 있어도 같은 높이로 보이도록 두 행 모두 이 값을 minHeight로 준다 — 셋 중 가장 많은 줄(값+평 단위 줄+sub)이 들어가는
+// 칸에 맞춘 값이다.
+const TILE_MIN_HEIGHT = 148;
 
 function SummaryTile({ s, borderRight }) {
   return (
@@ -28,6 +28,23 @@ function SummaryTile({ s, borderRight }) {
           >
             {s.value}
           </div>
+          {/* 평 단위 값 — ㎡/원 값 옆에 괄호로 붙이지 않고 그 아래 별도 줄로 병기한다. 크기는 ㎡ 값의
+              80%, 굵기는 없앰(그 외 색 등은 동일). */}
+          {s.valueNote && (
+            <div
+              style={{
+                fontSize: 16,
+                letterSpacing: "-.02em",
+                marginTop: 2,
+                color: s.ready ? "#171614" : "#C9C3B6",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {s.valueNote}
+            </div>
+          )}
           <div
             style={{
               fontSize: 13,
@@ -73,6 +90,9 @@ function BuildingSummaryRow({ s }) {
           <ul style={ulStyle}>
             <li style={liLabelStyle}>
               연면적 <span style={liValueStyle}>{b.totalFloorArea || dash}</span>
+              {b.totalFloorAreaPyeong && (
+                <div style={{ ...liValueStyle, fontSize: liValueStyle.fontSize * 0.9, fontWeight: undefined, marginTop: 2 }}>{b.totalFloorAreaPyeong}</div>
+              )}
             </li>
             <li style={liLabelStyle}>
               층수 <span style={liValueStyle}>{b.floorRange || dash}</span>
@@ -80,7 +100,7 @@ function BuildingSummaryRow({ s }) {
           </ul>
         </div>
         <div style={cellStyle(false)}>
-          <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em" }}>건폐율 · 용적률</div>
+          <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em" }}>건폐율 / 용적률</div>
           <ul style={ulStyle}>
             <li style={liLabelStyle}>
               건폐 <span style={liValueStyle}>{b.bcr || dash}</span>

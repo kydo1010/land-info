@@ -24,8 +24,10 @@ export function buildTabItems(tabs) {
   });
 }
 
-// 토지 공시가격 = 토지 면적(㎡, 토지대장) × 개별공시지가(원/㎡, 공시지가). 두 값은 서로 독립적으로
-// 조회되므로 하나가 아직 없거나(로딩/오류) 필지에 없으면(empty) 계산하지 않고 dash로 남긴다.
+// 토지 공시가격 = 토지 면적(㎡, 토지대장) × 개별공시지가(원/㎡, 공시지가) — 총면적에 대한 가격이라
+// 개별공시지가(단위면적당 가격)와 달리 "평당" 값이 성립하지 않는다(그래서 평 단위 병기가 없다).
+// 두 값은 서로 독립적으로 조회되므로 하나가 아직 없거나(로딩/오류) 필지에 없으면(empty) 계산하지
+// 않고 dash로 남긴다.
 export function computeLandPrice(land, chart, priceStatus) {
   const landAreaSqm = land ? land.areaSqm : null;
   const formatWon = (v) => `${num(Math.round(v))}원`;
@@ -59,6 +61,7 @@ export function buildSummaryItems({ zone, land, chart, st, landPriceLatest, onRe
     {
       label: "토지대장",
       value: st.land === "ok" ? land.area : st.land === "empty" ? "정보 없음" : dash,
+      valueNote: st.land === "ok" ? land.areaPyeong : null,
       sub: st.land === "ok" ? `지목 ${land.jimok} · ${land.owner}` : st.land === "empty" ? "등록된 토지대장 없음" : "조회 중",
       ready: st.land === "ok" || st.land === "empty",
       status: st.land,
@@ -67,6 +70,7 @@ export function buildSummaryItems({ zone, land, chart, st, landPriceLatest, onRe
     {
       label: "토지 개별공시지가",
       value: st.price === "ok" ? `${chart.priceLatest}원/㎡` : st.price === "empty" ? "정보 없음" : dash,
+      valueNote: st.price === "ok" ? `${chart.priceLatestPyeong}원/평` : null,
       sub: st.price === "ok" ? `${chart.priceLatestYear} · ${chart.priceDelta.replace("전년 대비 ", "전년비 ")}` : st.price === "empty" ? "등록된 이력 없음" : "조회 중",
       ready: st.price === "ok" || st.price === "empty",
       status: st.price,
