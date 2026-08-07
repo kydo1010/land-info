@@ -102,12 +102,12 @@ export function buildBuildingSummaryItem({ building, st, onRetry }) {
   };
 }
 
-// 토지대장 섹션의 표 행.
+// 토지대장 섹션의 표 행. "면적"은 평(areaPyeong)을 주 표시로, ㎡(area)를 그 아래 note로 둔다.
 export function buildLandRows(land) {
   if (!land) return [];
   return [
     { label: "지목", value: land.jimok },
-    { label: "면적", value: land.area, note: land.areaPyeong },
+    { label: "면적", value: land.areaPyeong, note: land.area },
     { label: "소유구분", value: land.owner },
   ];
 }

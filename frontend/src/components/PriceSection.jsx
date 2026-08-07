@@ -59,14 +59,14 @@ export default function PriceSection({ status, selShort, coords, chart, landPric
               <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 6 }}>
                 <div>
                   <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em" }}>{chart.priceLatestYear} 토지 개별공시지가</div>
+                  {/* 평을 주 표시로, 원/㎡는 그 아래 80% 크기의 보조 표시로 바꾼다. 전년 대비 증감률은
+                      값이 커진(이제는 평) 줄에 그대로 붙인다. */}
                   <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 6 }}>
-                    <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: "-.02em" }}>{chart.priceLatest}</div>
-                    <div style={{ fontSize: 13, color: "#6B665E" }}>원/㎡</div>
+                    <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: "-.02em" }}>약 {chart.priceLatestPyeong}</div>
+                    <div style={{ fontSize: 13, color: "#6B665E" }}>원/평</div>
                     <div style={{ fontSize: 12.5, color: "#1F4B43" }}>{chart.priceDelta}</div>
                   </div>
-                  {/* 평 단위 값 — 원/㎡ 값 옆에 괄호로 붙이지 않고 그 아래 별도 줄로 병기한다. 크기는
-                      ㎡ 값의 80%, 굵기는 없앰(그 외는 동일). */}
-                  <div style={{ fontSize: 26 * 0.8, letterSpacing: "-.02em", marginTop: 3 }}>{chart.priceLatestPyeong}원/평</div>
+                  <div style={{ fontSize: 26 * 0.8, letterSpacing: "-.02em", marginTop: 3 }}>{chart.priceLatest}원/㎡</div>
                   {/* 토지 공시가격은 총면적에 대한 가격(면적×개별공시지가)이라 개별공시지가와 달리
                       "평당" 값이 성립하지 않는다 — 평 단위 병기 없음. */}
                   <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 10 }}>
@@ -74,7 +74,7 @@ export default function PriceSection({ status, selShort, coords, chart, landPric
                     <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: "-.02em", color: "#171614" }}>{landPriceLatest}</div>
                   </div>
                 </div>
-                <div style={{ fontSize: 11.5, color: "#A6A19A" }}>단위 원/㎡ (원/평) · 기준일 1월 1일</div>
+                <div style={{ fontSize: 11.5, color: "#A6A19A" }}>단위 원/평 (원/㎡) · 기준일 1월 1일</div>
               </div>
 
               <div style={{ position: "relative", width: "100%", height: 190 }}>
@@ -123,7 +123,7 @@ export default function PriceSection({ status, selShort, coords, chart, landPric
               <div style={{ marginTop: 18, borderTop: "1px solid #E5E1D8" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "80px 1fr 170px 110px", fontSize: 11.5, color: "#8C877E", padding: "9px 2px", borderBottom: "1px solid #EDEAE2" }}>
                   <div>연도</div>
-                  <div style={{ textAlign: "right" }}>토지 개별공시지가</div>
+                  <div style={{ textAlign: "right" }}>토지 개별공시지가 (원/평)</div>
                   <div style={{ textAlign: "right" }}>토지 공시가격 (원)</div>
                   <div style={{ textAlign: "right" }}>전년 대비</div>
                 </div>
@@ -131,8 +131,8 @@ export default function PriceSection({ status, selShort, coords, chart, landPric
                   <div key={r.year} style={{ display: "grid", gridTemplateColumns: "80px 1fr 170px 110px", fontSize: 15.5, padding: "10px 2px", borderBottom: "1px solid #F3F0E9" }}>
                     <div style={{ color: "#3D3A34" }}>{r.year}</div>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ color: r.valueColor }}>{r.value} 원/㎡</div>
-                      <div style={{ color: r.valueColor, marginTop: 2 }}>{r.pyeongValue != null ? `${r.pyeongValue} 원/평` : "—"}</div>
+                      <div style={{ color: r.valueColor }}>{r.pyeongValue != null ? `약 ${r.pyeongValue} 원/평` : "—"}</div>
+                      <div style={{ fontSize: "80%", color: r.valueColor, marginTop: 2 }}>{r.value} 원/㎡</div>
                     </div>
                     <div style={{ textAlign: "right", color: r.valueColor }}>{landPriceRows[i]?.value ?? "—"}</div>
                     <div style={{ textAlign: "right", fontSize: 14.5, color: r.deltaColor }}>{r.delta}</div>

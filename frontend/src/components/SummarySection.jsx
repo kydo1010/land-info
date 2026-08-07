@@ -14,6 +14,9 @@ function SummaryTile({ s, borderRight }) {
         <ErrorBlock onRetry={s.onRetry} height={56} compact showText={false} />
       ) : (
         <>
+          {/* 평 값을 주 표시로, ㎡/원 값을 보조 표시로 바꾼다 — 평이 있으면 평을 위에 큰 글씨로,
+              ㎡/원은 그 아래 80% 크기로 병기한다(둘 다 같은 색, 굵기만 다름). 평 환산이 없는
+              항목(토지이용계획, 토지 공시가격)은 원래처럼 값 하나만 크게 보여준다. */}
           <div
             style={{
               fontSize: 20,
@@ -26,10 +29,8 @@ function SummaryTile({ s, borderRight }) {
               textOverflow: "ellipsis",
             }}
           >
-            {s.value}
+            {s.valueNote || s.value}
           </div>
-          {/* 평 단위 값 — ㎡/원 값 옆에 괄호로 붙이지 않고 그 아래 별도 줄로 병기한다. 크기는 ㎡ 값의
-              80%, 굵기는 없앰(그 외 색 등은 동일). */}
           {s.valueNote && (
             <div
               style={{
@@ -42,7 +43,7 @@ function SummaryTile({ s, borderRight }) {
                 textOverflow: "ellipsis",
               }}
             >
-              {s.valueNote}
+              {s.value}
             </div>
           )}
           <div
@@ -89,9 +90,10 @@ function BuildingSummaryRow({ s }) {
           <div style={{ fontSize: 13.5, color: "#8C877E", letterSpacing: ".04em" }}>건축 규모</div>
           <ul style={ulStyle}>
             <li style={liLabelStyle}>
-              연면적 <span style={liValueStyle}>{b.totalFloorArea || dash}</span>
-              {b.totalFloorAreaPyeong && (
-                <div style={{ ...liValueStyle, fontSize: liValueStyle.fontSize * 0.9, fontWeight: undefined, marginTop: 2 }}>{b.totalFloorAreaPyeong}</div>
+              {/* 평을 주 표시(굵은 인라인 값)로, ㎡는 그 아래 보조 표시로 바꾼다. */}
+              연면적 <span style={liValueStyle}>{b.totalFloorAreaPyeong || dash}</span>
+              {b.totalFloorArea && (
+                <div style={{ ...liValueStyle, fontSize: liValueStyle.fontSize * 0.9, fontWeight: undefined, marginTop: 2 }}>{b.totalFloorArea}</div>
               )}
             </li>
             <li style={liLabelStyle}>
